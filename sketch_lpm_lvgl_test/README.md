@@ -4,4 +4,4 @@
 
 内容为 LVGL widgets Demo, 适配了完整的显示输出，包括局部刷新，使用 Bayer 抖动改善显示效果，适配了使用摇杆作为鼠标输入，按钮 1 和摇杆按钮为鼠标按下，按钮 2 为开关背光，按钮 3 为开关 Bayer 抖动。
 
-需要将 lv_conf.h 复制到 Arduino 库文件夹中
+需要在 Arduino 库管理中安装 LVGL 库，并将 lv_conf.h 复制到 Arduino 库文件夹中
