@@ -1,6 +1,6 @@
 # LPM012M134B 试验场
 
-与 LPM012M134B 显示屏相关的测试电路和代码。
+与 LPM012M134B 显示屏相关的测试电路和代码。目前仅在 RP2040 平台上测试过
 
 ![](pcb.jpg)
 
@@ -75,7 +75,7 @@ FRP VCOM XFRP 都是 60Hz 但是实际上有点偏差也没问题（我测试 10
 
 参考：
 
-[https://down.cnwans.com/archives/509](https://down.cnwans.com/archives/509) 
+[https://down.cnwans.com/archives/509](https://down.cnwans.com/archives/509) （注意：这个链接中的接线图有错误：VDD1 和 VDD2 的电压写反了）
 
 [https://github.com/andelf/rp-embassy-playground/blob/master/src/lpm012m134b.rs](https://github.com/andelf/rp-embassy-playground/blob/master/src/lpm012m134b.rs) 
 
