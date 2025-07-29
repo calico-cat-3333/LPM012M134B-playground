@@ -16,6 +16,8 @@
 
 [sketch_LPM_uGUI_test](sketch_LPM_uGUI_test) 接入 uGUI 库的实验
 
+[sketch_lpm_lvgl_test](sketch_lpm_lvgl_test) 接入 LVGL 的早期测试
+
 ## 基本信息
 
 屏幕老王店里的两款 memory lcd 屏，据本人考证分别来自军拓飞腕和军拓铁腕 5
