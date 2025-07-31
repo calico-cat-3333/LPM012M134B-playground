@@ -19,8 +19,6 @@ class LPM012M134B {
   private:
   int xrst, vst, vck, enb, hst, hck, frp, xfrp;
   int r1, r2, g1, g2, b1, b2;
-  uint pwm_slice;
-  // int8_t framebuffer[240][240];
   public:
   int width = 240;
   int height = 240;
@@ -43,21 +41,6 @@ class LPM012M134B {
     pinMode(this->b1, OUTPUT);
     pinMode(this->b2, OUTPUT);
 
-    // gpio_set_function(this->frp, GPIO_FUNC_PWM);
-    // gpio_set_function(this->xfrp, GPIO_FUNC_PWM);
-    // if (pwm_gpio_to_slice_num(this->frp) != pwm_gpio_to_slice_num(this->xfrp)) {
-    //   while (true) {
-    //     Serial.println("Error: frp and xfrp in different slice!!!!");
-    //     delay(1000 * 5);
-    //   }
-    // }
-    // this->pwm_slice = pwm_gpio_to_slice_num(this->frp);
-    // pwm_set_wrap(this->pwm_slice, 8137);
-    // pwm_set_chan_level(this->pwm_slice, PWM_CHAN_A, 4069);
-    // pwm_set_chan_level(this->pwm_slice, PWM_CHAN_B, 4069);
-    // pwm_set_output_polarity(this->pwm_slice, false, true);
-    // pwm_set_clkdiv_int_frac(this->pwm_slice, 255, 0);
-    // pwm_set_enabled(this->pwm_slice, true);
     analogWriteFreq(100);
     analogWriteRange(256);
     analogWrite(this->frp, 127);
