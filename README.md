@@ -20,9 +20,9 @@
 
 ## 基本信息
 
-屏幕老王店里的两款 memory lcd 屏，据本人考证分别来自军拓飞腕和军拓铁腕 5
+屏幕老王店里的两款圆形 memory lcd 屏，据本人考证分别来自军拓飞腕和军拓铁腕 5
 
-240 \* 240 RGB222 并行接口
+屏幕分辨率为 240 \* 240 使用 RGB222 并行接口。
 
 该屏幕为 memory lcd 64 色，即每个颜色 4 级；透反屏，也就是关闭背光后依然可以靠反射环境光显示，极度省电且可以常显，可惜就是没有触摸屏。
 
@@ -57,11 +57,11 @@
 | 23  | LEDA | 背光 LED 正极 |
 | 24  | LEDK | 背光 LED 负极 |
 
-所有引脚耐压 6.3V 信号引脚最大电压 等同于 VDD1
+所有引脚耐压 6.3V, 信号引脚最大电压等同于 VDD1
 
-实际测试表明如果 VDD1 > VDD2 就会有问题。
+实际测试表明如果 VDD1 > VDD2 就会有问题，刷新不了。
 
-垂直时钟信号必须刷满 488 个边沿，否则会有问题。
+垂直时钟信号必须刷满 488 个边沿，否则会有问题，刷新几次之后就会有一帧刷新不出来。
 
 水平时钟信号 122 个边沿。
 
@@ -77,7 +77,7 @@ FRP VCOM XFRP 都是 60Hz 但是实际上有点偏差也没问题（我测试 10
 
 参考：
 
-[https://down.cnwans.com/archives/509](https://down.cnwans.com/archives/509) （注意：这个链接中的接线图有错误：VDD1 和 VDD2 的电压写反了）
+[https://down.cnwans.com/archives/509](https://down.cnwans.com/archives/509) （注意：这个链接中的接线图有错误：VDD1 和 VDD2 的电压写反了，背光的正负极写反了）
 
 [https://github.com/andelf/rp-embassy-playground/blob/master/src/lpm012m134b.rs](https://github.com/andelf/rp-embassy-playground/blob/master/src/lpm012m134b.rs) 
 
