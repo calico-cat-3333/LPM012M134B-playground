@@ -6,6 +6,8 @@
 
 使用摇杆作为鼠标输入，按钮 1 和摇杆按钮为鼠标按下，按钮 2 为开关背光，按钮 3 为开关 Bayer 抖动。
 
+尝试将刷新任务放到 Core1 上运行，实测能够少量提升帧率。
+
 内容为 LVGL widgets Demo
 
 需要在 Arduino 库管理中安装 LVGL 库，并将 lv_conf.h 复制到 Arduino 库文件夹中

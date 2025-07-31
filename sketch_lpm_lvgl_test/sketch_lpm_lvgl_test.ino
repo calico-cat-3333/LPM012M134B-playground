@@ -160,6 +160,17 @@ class LPM012M134B {
 
 };
 
+// 传输刷新块信息
+// 用于双核刷新加速
+// 核心 2 负责刷新，核心 1 负责将刷新范围发送到第二核心。
+// 利用 fifo 进行发送，第二核心接收 rfa1 地址，并刷新，第二核心空闲时使用 fifo 向第一核心发送空闲标志。
+struct refresh_area {
+  uint16_t *buf;
+  int y1;
+  int y2;
+} rfa1;
+refresh_area *prfa1 = & rfa1;
+
 LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
 
 #define TFT_HOR_RES   240
@@ -167,8 +178,9 @@ LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
 #define TFT_ROTATION  LV_DISPLAY_ROTATION_0
 
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
-#define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES / 2 * (LV_COLOR_DEPTH / 8))
-uint32_t draw_buf[DRAW_BUF_SIZE / 4];
+#define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES / 4 * (LV_COLOR_DEPTH / 8))
+uint8_t draw_buf1[DRAW_BUF_SIZE];
+uint8_t draw_buf2[DRAW_BUF_SIZE];
 
 #if LV_USE_LOG != 0
 void my_print( lv_log_level_t level, const char * buf )
@@ -179,27 +191,38 @@ void my_print( lv_log_level_t level, const char * buf )
 }
 #endif
 
-bool use_bayer = true;
+bool use_bayer = false;
 void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
 {
-  uint16_t * buf16 = (uint16_t *)px_map;
-  uint16_t * bufs = buf16;
-  unsigned long start = micros();
-  if (use_bayer) {
-    for (int i = area->y1; i <= area->y2; i++) {
-      for (int j = area->x1; j <= area->x2; j++) {
-        *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
-        buf16 ++;
-      }
-    }
-  }
-  lpm.directflush_rgb565(area->y1, area->y2, bufs);
-  unsigned long end = micros();
-  Serial.print("flush timeuse ");
-  Serial.print(end - start);
-  Serial.println(" us");
-  lv_display_flush_ready(disp);
+  rfa1.y1 = area->y1;
+  rfa1.y2 = area->y2;
+  rfa1.buf = (uint16_t *)px_map;
+  rp2040.fifo.push(1);
+  // int t = rp2040.fifo.pop();
+  // Serial.print("Core1: flush timeuse ");
+  // Serial.print(t);
+  // Serial.println(" us");
 }
+// void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
+// {
+//   uint16_t * buf16 = (uint16_t *)px_map;
+//   uint16_t * bufs = buf16;
+//   unsigned long start = micros();
+//   if (use_bayer) {
+//     for (int i = area->y1; i <= area->y2; i++) {
+//       for (int j = area->x1; j <= area->x2; j++) {
+//         *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
+//         buf16 ++;
+//       }
+//     }
+//   }
+//   lpm.directflush_rgb565(area->y1, area->y2, bufs);
+//   unsigned long end = micros();
+//   Serial.print("flush timeuse ");
+//   Serial.print(end - start);
+//   Serial.println(" us");
+//   lv_display_flush_ready(disp);
+// }
 
 /*Read the joystick*/
 // int posx = 120;
@@ -261,15 +284,12 @@ void rounder_event_cb(lv_event_t * e)
 }
 
 int bl = 14;
+lv_display_t * disp;
 
 void setup() {
   Serial.begin();
 
-  pinMode(bl, OUTPUT);
-  digitalWrite(bl, HIGH);
-
   pinMode(24, INPUT_PULLUP);
-  lpm.init();
   analogReadResolution(12);
 
   String LVGL_Arduino = "Hello Arduino! ";
@@ -282,10 +302,9 @@ void setup() {
 #if LV_USE_LOG != 0
   lv_log_register_print_cb(my_print);
 #endif
-  lv_display_t * disp;
   disp = lv_display_create(TFT_HOR_RES, TFT_VER_RES);
   lv_display_set_flush_cb(disp, my_disp_flush);
-  lv_display_set_buffers(disp, draw_buf, NULL, sizeof(draw_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_buffers(disp, draw_buf1, draw_buf2, sizeof(draw_buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_add_event_cb(disp, rounder_event_cb, LV_EVENT_INVALIDATE_AREA, NULL);
 
   lv_indev_t * mouse_indev = lv_indev_create();
@@ -321,4 +340,34 @@ void loop() {
   // put your main code here, to run repeatedly:
   lv_timer_handler(); /* let the GUI do its work */
   delay(5); /* let this time pass */
+}
+
+bool core1_separate_stack = true;
+
+void setup1() {
+  delay(500);
+  pinMode(bl, OUTPUT);
+  digitalWrite(bl, HIGH);
+  lpm.init();
+}
+
+void loop1(){
+  rp2040.fifo.pop();
+  uint16_t * buf16 = (*prfa1).buf;
+  uint16_t * bufs = buf16;
+  int y1 = (*prfa1).y1;
+  int y2 = (*prfa1).y2;
+  // unsigned long start = micros();
+  if (use_bayer) {
+    for (int i = y1; i <= y2; i++) {
+      for (int j = 0; j <= 239; j++) {
+        *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
+        buf16 ++;
+      }
+    }
+  }
+  lpm.directflush_rgb565(y1, y2, bufs);
+  // unsigned long end = micros();
+  // rp2040.fifo.push(end - start);
+  lv_display_flush_ready(disp);
 }
