@@ -84,67 +84,6 @@ class LPM012M134B {
   #undef digitalToggle
   #define digitalToggle(pin) gpio_put(pin, !gpio_get(pin))
 #endif
-  // void flush(int rstart=0, int height=240) {
-  //   // flush framebuffer to screen
-  //   // support partial (line) update
-  //   // start : start line index
-  //   // height : update area height
-  //   int start = max(0, rstart) * 2;
-  //   int end = min(240, height + rstart) * 2;
-  //   digitalWrite(xrst, HIGH); // xrst high, enter update mode
-  //   delayMicroseconds(20);
-  //   digitalWrite(vst, HIGH);
-  //   delayMicroseconds(40);
-  //   digitalToggle(vck); // vck 1
-  //   delayMicroseconds(40);
-  //   digitalWrite(vst, LOW);
-  //   digitalToggle(vck); // vck 2
-  //   //delayMicroseconds(1);
-  //   for (int i = 0; i < 486; i++) {
-  //     if (i >= start && i < end) {
-  //       digitalWrite(hst, HIGH);
-  //       digitalToggle(hck); // hck 1
-  //       digitalWrite(hst, LOW);
-  //       if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
-  //       for (int j = 0; j < 120; j++) {
-  //         if (j == 20) digitalWrite(enb, LOW);
-  //         int8_t cpixel = framebuffer[i / 2][j * 2];
-  //         int8_t npixel = framebuffer[i / 2][(j * 2) + 1];
-  //         if (i % 2 == 1) { // SPB
-  //           digitalWrite(r1, (cpixel & 0b010000) ? HIGH : LOW);
-  //           digitalWrite(g1, (cpixel & 0b000100) ? HIGH : LOW);
-  //           digitalWrite(b1, (cpixel & 0b000001) ? HIGH : LOW);
-  //           digitalWrite(r2, (npixel & 0b010000) ? HIGH : LOW);
-  //           digitalWrite(g2, (npixel & 0b000100) ? HIGH : LOW);
-  //           digitalWrite(b2, (npixel & 0b000001) ? HIGH : LOW);
-  //         }
-  //         else { // LPB
-  //           digitalWrite(r1, (cpixel & 0b100000) ? HIGH : LOW);
-  //           digitalWrite(g1, (cpixel & 0b001000) ? HIGH : LOW);
-  //           digitalWrite(b1, (cpixel & 0b000010) ? HIGH : LOW);
-  //           digitalWrite(r2, (npixel & 0b100000) ? HIGH : LOW);
-  //           digitalWrite(g2, (npixel & 0b001000) ? HIGH : LOW);
-  //           digitalWrite(b2, (npixel & 0b000010) ? HIGH : LOW);
-  //         }
-  //         //delayMicroseconds(1);
-  //         digitalToggle(hck); // hck 2~121
-  //       }
-  //       //delayMicroseconds(1);
-  //       digitalToggle(vck); // vck 3~482 中的有效数据刷新部分
-  //       digitalToggle(hck); // hck 122
-  //     }
-  //     else {
-  //       if (i == end) {
-  //         digitalWrite(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
-  //         delayMicroseconds(40);
-  //         digitalWrite(enb, LOW);
-  //       }
-  //       if (i == 484) digitalWrite(xrst, LOW); // xrst low, exit update mode
-  //       delayMicroseconds(1);
-  //       digitalToggle(vck); // vck 3~488 中的无数据部分
-  //     }
-  //   }
-  // }
 
   void directflush_rgb565(int y1, int y2, uint16_t * buf) {
     // flush a rgb565 buffer, for lvgl display flush callback
@@ -217,33 +156,6 @@ class LPM012M134B {
   #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 #endif
 
-  // void fill(int8_t rgb222) {
-  //   for (int i = 0; i < 240; i++) {
-  //     for (int j = 0; j < 240; j++) {
-  //       framebuffer[i][j] = rgb222;
-  //     }
-  //   }
-  // }
-
-  // void setPixel(int x, int y, int8_t rgb222) {
-  //   if (x < 0 || x >= 240 || y < 0 || y >= 240) return;
-  //   framebuffer[y][x] = rgb222;
-  // }
-
-  // uint8_t ctest(uint8_t i, uint8_t thr) {
-  //   if (i >= 0 && i < 85) {
-  //     if (i > thr / 3) return 1;
-  //     else return 0;
-  //   }
-  //   else if (i >= 85 && i < 171) {
-  //     if (i >= 85 + (thr / 3)) return 2;
-  //     else return 1;
-  //   }
-  //   else {
-  //     if (i >= 171 + (thr / 3)) return 3;
-  //     else return 2;
-  //   }
-  // }
 
   // by chatgpt with my modification
   uint16_t quantize_rgb565_dithered(uint16_t rgb565, int x, int y) {
@@ -263,11 +175,6 @@ class LPM012M134B {
     // return (r2 << 4) | (g2 << 2) | b2;
   }
 
-  // void setPixelRGB565(int x, int y, uint16_t rgb565) {
-  //   if (x < 0 || x >= 240 || y < 0 || y >= 240) return;
-  //   framebuffer[y][x] = (rgb565 >> 10) & 0b110000 | (rgb565 >> 7) & 0b1100 | (rgb565 >> 3) & 0b11;
-  //   //framebuffer[y][x] = quantize_rgb565_dithered(rgb565, x, y);
-  // }
 };
 
 LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
@@ -288,26 +195,6 @@ void my_print( lv_log_level_t level, const char * buf )
     Serial.flush();
 }
 #endif
-
-/* LVGL calls it when a rendered image needs to copied to the display*/
-// void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
-// {
-//   uint16_t * buf16 = (uint16_t *)px_map;
-//   unsigned long start = micros();
-//   int32_t x, y;
-//   for(y = area->y1; y <= area->y2; y++) {
-//     for(x = area->x1; x <= area->x2; x++) {
-//       lpm.setPixelRGB565(x, y, *buf16);
-//       buf16++;
-//     }
-//   }
-//   lpm.flush(area->y1, area->y2 - area->y1 + 1);
-//   unsigned long end = micros();
-//   Serial.print("flush timeuse ");
-//   Serial.print(end - start);
-//   Serial.println(" us");
-//   lv_display_flush_ready(disp);
-// }
 
 bool use_bayer = true;
 void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
