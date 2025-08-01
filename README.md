@@ -16,7 +16,7 @@
 
 [sketch_LPM_uGUI_test](sketch_LPM_uGUI_test) 接入 uGUI 库的实验
 
-[sketch_lpm_lvgl_test](sketch_lpm_lvgl_test) 接入 LVGL 的早期测试
+[sketch_lpm_lvgl_test](sketch_lpm_lvgl_test) 接入 LVGL 的实验
 
 ## 基本信息
 

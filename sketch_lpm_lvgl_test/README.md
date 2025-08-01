@@ -8,6 +8,8 @@
 
 尝试将刷新任务放到 Core1 上运行，实测能够少量提升帧率。
 
+使用查找表优化 Bayer 抖动。
+
 内容为 LVGL widgets Demo
 
 需要在 Arduino 库管理中安装 LVGL 库，并将 lv_conf.h 复制到 Arduino 库文件夹中
