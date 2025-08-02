@@ -405,9 +405,9 @@ void setup() {
   lv_image_set_src(cursor_obj, LV_SYMBOL_CLOSE);             /* Set image source. */
   lv_indev_set_cursor(mouse_indev, cursor_obj);
 
-  //lv_demo_widgets();
+  lv_demo_widgets();
   //lv_example_image_2();
-  lv_demo_benchmark();
+  //lv_demo_benchmark();
 
   Serial.println("Setup done");
 }

@@ -12,4 +12,4 @@
 
 内容为 LVGL widgets Demo
 
-需要在 Arduino 库管理中安装 LVGL 库，并将 lv_conf.h 复制到 Arduino 库文件夹中
+需要在 Arduino 库管理中安装 LVGL 库，并将 lv_conf.h 复制到 Arduino 库文件夹中，貌似还需要复制 demos 和 examples 文件夹到 src 文件夹并修改几个头文件路径。
