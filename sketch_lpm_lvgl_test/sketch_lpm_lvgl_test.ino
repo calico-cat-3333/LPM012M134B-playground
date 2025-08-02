@@ -9,6 +9,8 @@
 
 // 打印刷新函数的耗时，注意会导致无法双缓冲刷新。
 #define PRINT_TIMEUSE 0
+// 是否使用核心 1 执行屏幕刷新
+#define USE_CORE1_FLUSH 1
 
 // Bayer 4x4
 const uint8_t bayer[4][4] = {
@@ -274,6 +276,7 @@ void my_print( lv_log_level_t level, const char * buf )
 #endif
 
 bool use_bayer = true;
+#if USE_CORE1_FLUSH
 void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
 {
   rfa1.y1 = area->y1;
@@ -289,26 +292,28 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
   Serial.println(" lines");
 #endif
 }
-// void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
-// {
-//   uint16_t * buf16 = (uint16_t *)px_map;
-//   uint16_t * bufs = buf16;
-//   unsigned long start = micros();
-//   if (use_bayer) {
-//     for (int i = area->y1; i <= area->y2; i++) {
-//       for (int j = area->x1; j <= area->x2; j++) {
-//         *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
-//         buf16 ++;
-//       }
-//     }
-//   }
-//   lpm.directflush_rgb565(area->y1, area->y2, bufs);
-//   unsigned long end = micros();
-//   Serial.print("flush timeuse ");
-//   Serial.print(end - start);
-//   Serial.println(" us");
-//   lv_display_flush_ready(disp);
-// }
+#else
+void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
+{
+  uint16_t * buf16 = (uint16_t *)px_map;
+  uint16_t * bufs = buf16;
+  unsigned long start = micros();
+  if (use_bayer) {
+    for (int i = area->y1; i <= area->y2; i++) {
+      for (int j = area->x1; j <= area->x2; j++) {
+        *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
+        buf16 ++;
+      }
+    }
+  }
+  lpm.directflush_rgb565(area->y1, area->y2, bufs);
+  unsigned long end = micros();
+  Serial.print("flush timeuse ");
+  Serial.print(end - start);
+  Serial.println(" us");
+  lv_display_flush_ready(disp);
+}
+#endif
 
 /*Read the joystick*/
 // int posx = 120;
@@ -400,9 +405,9 @@ void setup() {
   lv_image_set_src(cursor_obj, LV_SYMBOL_CLOSE);             /* Set image source. */
   lv_indev_set_cursor(mouse_indev, cursor_obj);
 
-  lv_demo_widgets();
+  //lv_demo_widgets();
   //lv_example_image_2();
-  //lv_demo_benchmark();
+  lv_demo_benchmark();
 
   Serial.println("Setup done");
 }
@@ -431,12 +436,12 @@ void loop() {
 bool core1_separate_stack = true;
 
 void setup1() {
-  delay(500);
   pinMode(bl, OUTPUT);
   digitalWrite(bl, HIGH);
   lpm.init();
 }
 
+#if USE_CORE1_FLUSH
 void loop1(){
   rp2040.fifo.pop();
   uint16_t * buf16 = (*prfa1).buf;
@@ -461,3 +466,4 @@ void loop1(){
 #endif
   lv_display_flush_ready(disp);
 }
+#endif
