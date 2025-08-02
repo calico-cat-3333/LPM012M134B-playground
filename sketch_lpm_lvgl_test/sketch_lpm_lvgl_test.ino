@@ -7,7 +7,10 @@
 
 #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 
-    // Bayer 4x4
+// 打印刷新函数的耗时，注意会导致无法双缓冲刷新。
+#define PRINT_TIMEUSE 0
+
+// Bayer 4x4
 const uint8_t bayer[4][4] = {
   { 0,  8,  2, 10 },
   {12,  4, 14,  6 },
@@ -83,6 +86,18 @@ const uint8_t bayer_lut[64][4][4] = {
 {{3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}},
 };
 
+// compressed 6-bit gray to 2-bit gray bayer dither LUT
+// useage : (compressed_bayer_lut[6bitgray] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3
+const uint32_t compressed_bayer_lut[64] = {
+  0, 1, 1048577, 1048593, 1048593, 1114129, 1115153, 1074856977,
+  1074856977, 1074873361, 1141982225, 1141982229, 1141982229, 1146176533, 1146176597, 1146438741,
+  1146438741, 1146438997, 1414874453, 1414878549, 1414878549, 1431655765, 1431655766, 1432704342,
+  1432704358, 1432704358, 1432769894, 1432770918, 2506512742, 2506512742, 2506529126, 2573637990,
+  2573637994, 2573637994, 2577832298, 2577832362, 2578094506, 2578094506, 2578094762, 2846530218,
+  2846534314, 2846534314, 2863311530, 2863311531, 2864360107, 2864360107, 2864360123, 2864425659,
+  2864426683, 2864426683, 3938168507, 3938184891, 4005293755, 4005293755, 4005293759, 4009488063,
+  4009488127, 4009488127, 4009750271, 4009750527, 4278185983, 4278185983, 4278190079, 4294967295,
+};
 
 class LPM012M134B {
   private:
@@ -142,6 +157,9 @@ class LPM012M134B {
     // support partial (line) update
     // y1: lvgl area->y1
     // y2: lvgl area->y2
+    uint16_t * pixelpointer = buf;
+    uint16_t cpixel, npixel;
+    int i, j;
     int start = max(0, y1) * 2;
     int end = min(240, y2 + 1) * 2;
     digitalWrite(xrst, HIGH); // xrst high, enter update mode
@@ -153,18 +171,18 @@ class LPM012M134B {
     digitalWrite(vst, LOW);
     digitalToggle(vck); // vck 2
     //delayMicroseconds(1);
-    for (int i = 0; i < 486; i++) {
+    for (i = 0; i < 486; i++) {
       if (i >= start && i < end) {
         digitalWrite(hst, HIGH);
         digitalToggle(hck); // hck 1
         digitalWrite(hst, LOW);
         if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
-        for (int j = 0; j < 120; j++) {
+        for (j = 0; j < 120; j++) {
           if (j == 20) digitalWrite(enb, LOW);
-          uint16_t * pixelpointer = buf + (240 * ((i - start) / 2)) + j * 2;
-          uint16_t cpixel, npixel;
+          //pixelpointer = buf + (240 * ((i - start) / 2)) + j * 2;
           cpixel = *pixelpointer;
           npixel = *(pixelpointer + 1);
+          pixelpointer = pixelpointer + 2;
           if (i % 2 == 1) { // SPB
             digitalWriteFast(r1, (cpixel & 0x4000)); // (1 << 14)
             digitalWriteFast(g1, (cpixel & 0x0200)); // (1 << 9)
@@ -180,6 +198,7 @@ class LPM012M134B {
             digitalWriteFast(r2, (npixel & 0x8000));
             digitalWriteFast(g2, (npixel & 0x0400));
             digitalWriteFast(b2, (npixel & 0x0010));
+            if (j == 119) pixelpointer = pixelpointer - 240; // LPB done, then SPB
           }
           //delayMicroseconds(1);
           digitalToggle(hck); // hck 2~121
@@ -211,21 +230,12 @@ class LPM012M134B {
 
   // by chatgpt with my modification
   uint16_t quantize_rgb565_dithered(uint16_t rgb565, int x, int y) {
-    // 取 RGB565 各通道
-    // uint8_t r = ((rgb565 >> 11) & 0x1F) << 3;
-    // uint8_t g = ((rgb565 >> 5) & 0x3F) << 2;
-    // uint8_t b = (rgb565 & 0x1F) << 3;
-    // uint8_t threshold = bayer[y & 3][x & 3] * 16; // % 4 == & 0b11 == & 3
-
-    // // uint8_t r2 = ctest(r, threshold);
-    // // uint8_t g2 = ctest(g, threshold);
-    // // uint8_t b2 = ctest(b, threshold);
-    // uint8_t r2 = min(3, r / 85 + int(r % 85 > threshold / 3));
-    // uint8_t g2 = min(3, g / 85 + int(g % 85 > threshold / 3));
-    // uint8_t b2 = min(3, b / 85 + int(b % 85 > threshold / 3));
-    uint8_t r2 = bayer_lut[((rgb565 >> 11) & 0x1F) << 1][y & 3][x & 3];
-    uint8_t g2 = bayer_lut[((rgb565 >> 5) & 0x3F)][y & 3][x & 3];
-    uint8_t b2 = bayer_lut[(rgb565 & 0x1F) << 1][y & 3][x & 3];
+    // uint8_t r2 = bayer_lut[((rgb565 >> 11) & 0x1F) << 1][y & 3][x & 3];
+    // uint8_t g2 = bayer_lut[((rgb565 >> 5) & 0x3F)][y & 3][x & 3];
+    // uint8_t b2 = bayer_lut[(rgb565 & 0x1F) << 1][y & 3][x & 3];
+    uint8_t r2 = (compressed_bayer_lut[((rgb565 >> 11) & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
+    uint8_t g2 = (compressed_bayer_lut[((rgb565 >> 5) & 0x3F)] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
+    uint8_t b2 = (compressed_bayer_lut[(rgb565 & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
     return (r2 << 14) | (g2 << 9) | (b2 << 3);
     // return (r2 << 4) | (g2 << 2) | b2;
   }
@@ -270,10 +280,14 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
   rfa1.y2 = area->y2;
   rfa1.buf = (uint16_t *)px_map;
   rp2040.fifo.push(1);
-  // int t = rp2040.fifo.pop();
-  // Serial.print("Core1: flush timeuse ");
-  // Serial.print(t);
-  // Serial.println(" us");
+#if PRINT_TIMEUSE
+  int t = rp2040.fifo.pop();
+  Serial.print("Core1: flush timeuse ");
+  Serial.print(t);
+  Serial.print(" us for ");
+  Serial.print(area->y2 - area->y1 + 1);
+  Serial.println(" lines");
+#endif
 }
 // void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
 // {
@@ -429,7 +443,9 @@ void loop1(){
   uint16_t * bufs = buf16;
   int y1 = (*prfa1).y1;
   int y2 = (*prfa1).y2;
-  // unsigned long start = micros();
+#if PRINT_TIMEUSE
+  unsigned long start = micros();
+#endif
   if (use_bayer) {
     for (int i = y1; i <= y2; i++) {
       for (int j = 0; j <= 239; j++) {
@@ -439,7 +455,9 @@ void loop1(){
     }
   }
   lpm.directflush_rgb565(y1, y2, bufs);
-  // unsigned long end = micros();
-  // rp2040.fifo.push(end - start);
+#if PRINT_TIMEUSE
+  unsigned long end = micros();
+  rp2040.fifo.push(end - start);
+#endif
   lv_display_flush_ready(disp);
 }
