@@ -2,6 +2,8 @@
 
 与 LPM012M134B 显示屏相关的测试电路和代码。目前仅在 RP2040 平台 arduino-pico 上测试过
 
+[硬件开源](https://oshwhub.com/calico-cat-3333/lpm012m134b_testboard)
+
 ![](pcb.jpg)
 
 ## 文件说明
