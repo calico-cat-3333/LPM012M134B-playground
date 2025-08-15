@@ -11,6 +11,9 @@
 #define PRINT_TIMEUSE 0
 // 是否使用核心 1 执行屏幕刷新
 #define USE_CORE1_FLUSH 1
+// 摇杆判定移动阈值
+#define JOYSITCK_READ_THRESHOLD 20
+
 
 // Bayer 4x4
 const uint8_t bayer[4][4] = {
@@ -338,14 +341,23 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
 //     data->state = LV_INDEV_STATE_PRESSED;
 //   }
 // }
+
+int lax, lay;
+
 void my_joystick_read( lv_indev_t * indev, lv_indev_data_t * data )
 {
   int ax, ay;
   ay = analogRead(A0);
   ax = analogRead(A1);
-  // Serial.print(ax);
-  // Serial.print(' ');
-  // Serial.println(ay);
+  Serial.print(ax);
+  Serial.print(' ');
+  Serial.print(ay);
+  Serial.print(' ');
+  if (abs(lax - ax) <= JOYSITCK_READ_THRESHOLD) ax = lax; else lax = ax;
+  if (abs(lay - ay) <= JOYSITCK_READ_THRESHOLD) ay = lay; else lay = ay;
+  Serial.print(ax);
+  Serial.print(' ');
+  Serial.println(ay);
   int px, py;
   px = 240 - int((1.0 * min(ax, 4096) / 4096) * 240);
   py = int((1.0 * min(ay, 4096) / 4096) * 240);
