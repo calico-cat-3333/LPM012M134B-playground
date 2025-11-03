@@ -14,7 +14,7 @@
 
 [SCH_Schematic1_2025-07-12.pdf](SCH_Schematic1_2025-07-12.pdf) 测试电路板电路原理图
 
-[LPM012134B_lib](LPM012134B_lib) 尝试写成 Arduino 库，请复制或软链接到 Arduino/librarys 文件夹中。
+[LPM012M134B_lib](LPM012M134B_lib) 尝试写成 Arduino 库，请复制或软链接到 Arduino/librarys 文件夹中。
 
 [sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 
