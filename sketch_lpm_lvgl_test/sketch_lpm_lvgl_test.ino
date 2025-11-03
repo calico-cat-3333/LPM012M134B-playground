@@ -3,7 +3,7 @@
 #include <lvgl.h>
 #include "demos/lv_demos.h"
 #include "examples/lv_examples.h"
-
+#include "lpm012m134b.h"
 
 #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 
@@ -13,239 +13,6 @@
 #define USE_CORE1_FLUSH 1
 // 摇杆判定移动阈值
 #define JOYSITCK_READ_THRESHOLD 20
-
-
-// Bayer 4x4
-const uint8_t bayer[4][4] = {
-  { 0,  8,  2, 10 },
-  {12,  4, 14,  6 },
-  { 3, 11,  1,  9 },
-  {15,  7, 13,  5 }
-};
-
-// 6-bit gray to 2-bit gray bayer dither LUT
-const uint8_t bayer_lut[64][4][4] = {
-{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
-{{1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
-{{1, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}},
-{{1, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}},
-{{1, 0, 1, 0}, {0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 0}},
-{{1, 0, 1, 0}, {0, 0, 0, 0}, {1, 0, 1, 0}, {0, 0, 0, 0}},
-{{1, 0, 1, 0}, {0, 1, 0, 0}, {1, 0, 1, 0}, {0, 0, 0, 0}},
-{{1, 0, 1, 0}, {0, 1, 0, 0}, {1, 0, 1, 0}, {0, 0, 0, 1}},
-{{1, 0, 1, 0}, {0, 1, 0, 0}, {1, 0, 1, 0}, {0, 0, 0, 1}},
-{{1, 0, 1, 0}, {0, 1, 0, 1}, {1, 0, 1, 0}, {0, 0, 0, 1}},
-{{1, 0, 1, 0}, {0, 1, 0, 1}, {1, 0, 1, 0}, {0, 1, 0, 1}},
-{{1, 1, 1, 0}, {0, 1, 0, 1}, {1, 0, 1, 0}, {0, 1, 0, 1}},
-{{1, 1, 1, 0}, {0, 1, 0, 1}, {1, 0, 1, 0}, {0, 1, 0, 1}},
-{{1, 1, 1, 0}, {0, 1, 0, 1}, {1, 0, 1, 1}, {0, 1, 0, 1}},
-{{1, 1, 1, 1}, {0, 1, 0, 1}, {1, 0, 1, 1}, {0, 1, 0, 1}},
-{{1, 1, 1, 1}, {0, 1, 0, 1}, {1, 1, 1, 1}, {0, 1, 0, 1}},
-{{1, 1, 1, 1}, {0, 1, 0, 1}, {1, 1, 1, 1}, {0, 1, 0, 1}},
-{{1, 1, 1, 1}, {1, 1, 0, 1}, {1, 1, 1, 1}, {0, 1, 0, 1}},
-{{1, 1, 1, 1}, {1, 1, 0, 1}, {1, 1, 1, 1}, {0, 1, 1, 1}},
-{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {0, 1, 1, 1}},
-{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {0, 1, 1, 1}},
-{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}},
-{{2, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}},
-{{2, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 2, 1}, {1, 1, 1, 1}},
-{{2, 1, 2, 1}, {1, 1, 1, 1}, {1, 1, 2, 1}, {1, 1, 1, 1}},
-{{2, 1, 2, 1}, {1, 1, 1, 1}, {1, 1, 2, 1}, {1, 1, 1, 1}},
-{{2, 1, 2, 1}, {1, 1, 1, 1}, {2, 1, 2, 1}, {1, 1, 1, 1}},
-{{2, 1, 2, 1}, {1, 2, 1, 1}, {2, 1, 2, 1}, {1, 1, 1, 1}},
-{{2, 1, 2, 1}, {1, 2, 1, 1}, {2, 1, 2, 1}, {1, 1, 1, 2}},
-{{2, 1, 2, 1}, {1, 2, 1, 1}, {2, 1, 2, 1}, {1, 1, 1, 2}},
-{{2, 1, 2, 1}, {1, 2, 1, 2}, {2, 1, 2, 1}, {1, 1, 1, 2}},
-{{2, 1, 2, 1}, {1, 2, 1, 2}, {2, 1, 2, 1}, {1, 2, 1, 2}},
-{{2, 2, 2, 1}, {1, 2, 1, 2}, {2, 1, 2, 1}, {1, 2, 1, 2}},
-{{2, 2, 2, 1}, {1, 2, 1, 2}, {2, 1, 2, 1}, {1, 2, 1, 2}},
-{{2, 2, 2, 1}, {1, 2, 1, 2}, {2, 1, 2, 2}, {1, 2, 1, 2}},
-{{2, 2, 2, 2}, {1, 2, 1, 2}, {2, 1, 2, 2}, {1, 2, 1, 2}},
-{{2, 2, 2, 2}, {1, 2, 1, 2}, {2, 2, 2, 2}, {1, 2, 1, 2}},
-{{2, 2, 2, 2}, {1, 2, 1, 2}, {2, 2, 2, 2}, {1, 2, 1, 2}},
-{{2, 2, 2, 2}, {2, 2, 1, 2}, {2, 2, 2, 2}, {1, 2, 1, 2}},
-{{2, 2, 2, 2}, {2, 2, 1, 2}, {2, 2, 2, 2}, {1, 2, 2, 2}},
-{{2, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}, {1, 2, 2, 2}},
-{{2, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}, {1, 2, 2, 2}},
-{{2, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}},
-{{3, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 2, 2}},
-{{3, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 2, 2}, {2, 2, 2, 2}, {2, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 3, 2}, {2, 2, 2, 2}, {2, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 3, 2}, {2, 2, 2, 2}, {3, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 3, 2}, {2, 3, 2, 2}, {3, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 3, 2}, {2, 3, 2, 2}, {3, 2, 3, 2}, {2, 2, 2, 2}},
-{{3, 2, 3, 2}, {2, 3, 2, 2}, {3, 2, 3, 2}, {2, 2, 2, 3}},
-{{3, 2, 3, 2}, {2, 3, 2, 3}, {3, 2, 3, 2}, {2, 2, 2, 3}},
-{{3, 2, 3, 2}, {2, 3, 2, 3}, {3, 2, 3, 2}, {2, 3, 2, 3}},
-{{3, 2, 3, 2}, {2, 3, 2, 3}, {3, 2, 3, 2}, {2, 3, 2, 3}},
-{{3, 3, 3, 2}, {2, 3, 2, 3}, {3, 2, 3, 2}, {2, 3, 2, 3}},
-{{3, 3, 3, 2}, {2, 3, 2, 3}, {3, 2, 3, 3}, {2, 3, 2, 3}},
-{{3, 3, 3, 3}, {2, 3, 2, 3}, {3, 2, 3, 3}, {2, 3, 2, 3}},
-{{3, 3, 3, 3}, {2, 3, 2, 3}, {3, 2, 3, 3}, {2, 3, 2, 3}},
-{{3, 3, 3, 3}, {2, 3, 2, 3}, {3, 3, 3, 3}, {2, 3, 2, 3}},
-{{3, 3, 3, 3}, {3, 3, 2, 3}, {3, 3, 3, 3}, {2, 3, 2, 3}},
-{{3, 3, 3, 3}, {3, 3, 2, 3}, {3, 3, 3, 3}, {2, 3, 3, 3}},
-{{3, 3, 3, 3}, {3, 3, 2, 3}, {3, 3, 3, 3}, {2, 3, 3, 3}},
-{{3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}, {2, 3, 3, 3}},
-{{3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}, {3, 3, 3, 3}},
-};
-
-// compressed 6-bit gray to 2-bit gray bayer dither LUT
-// useage : (compressed_bayer_lut[6bitgray] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3
-const uint32_t compressed_bayer_lut[64] = {
-  0, 1, 1048577, 1048593, 1048593, 1114129, 1115153, 1074856977,
-  1074856977, 1074873361, 1141982225, 1141982229, 1141982229, 1146176533, 1146176597, 1146438741,
-  1146438741, 1146438997, 1414874453, 1414878549, 1414878549, 1431655765, 1431655766, 1432704342,
-  1432704358, 1432704358, 1432769894, 1432770918, 2506512742, 2506512742, 2506529126, 2573637990,
-  2573637994, 2573637994, 2577832298, 2577832362, 2578094506, 2578094506, 2578094762, 2846530218,
-  2846534314, 2846534314, 2863311530, 2863311531, 2864360107, 2864360107, 2864360123, 2864425659,
-  2864426683, 2864426683, 3938168507, 3938184891, 4005293755, 4005293755, 4005293759, 4009488063,
-  4009488127, 4009488127, 4009750271, 4009750527, 4278185983, 4278185983, 4278190079, 4294967295,
-};
-
-class LPM012M134B {
-  private:
-  int xrst, vst, vck, enb, hst, hck, frp, xfrp;
-  int r1, r2, g1, g2, b1, b2;
-  public:
-  int width = 240;
-  int height = 240;
-  LPM012M134B(int vst, int vck, int enb, int xrst, int frp, int xfrp, int hst, int hck,
-              int r1, int r2, int g1, int g2, int b1, int b2)
-              : vst(vst), vck(vck), enb(enb), xrst(xrst), frp(frp), xfrp(xfrp), hst(hst), hck(hck),
-                r1(r1), r2(r2), g1(g1), g2(g2), b1(b1), b2(b2) {}
-
-  void init() {
-    pinMode(this->xrst, OUTPUT);
-    pinMode(this->vst, OUTPUT);
-    pinMode(this->vck, OUTPUT);
-    pinMode(this->enb, OUTPUT);
-    pinMode(this->hst, OUTPUT);
-    pinMode(this->hck, OUTPUT);
-    pinMode(this->r1, OUTPUT);
-    pinMode(this->r2, OUTPUT);
-    pinMode(this->g1, OUTPUT);
-    pinMode(this->g2, OUTPUT);
-    pinMode(this->b1, OUTPUT);
-    pinMode(this->b2, OUTPUT);
-
-    analogWriteFreq(100);
-    analogWriteRange(256);
-    analogWrite(this->frp, 127);
-
-    digitalWrite(this->xrst, LOW);
-    digitalWrite(this->vck, LOW);
-    digitalWrite(this->vst, LOW);
-    digitalWrite(this->hck, LOW);
-    digitalWrite(this->hst, LOW);
-    digitalWrite(this->enb, LOW);
-    digitalWrite(this->r1, LOW);
-    digitalWrite(this->r2, LOW);
-    digitalWrite(this->g1, LOW);
-    digitalWrite(this->g2, LOW);
-    digitalWrite(this->b1, LOW);
-    digitalWrite(this->b2, LOW);
-    //this->fill(0);
-    //this->flush();
-  }
-
-#ifdef ARDUINO_ARCH_RP2040
-  // fast draw on rp2040
-  #define digitalWrite gpio_put
-  #undef digitalToggle
-  #define digitalToggle(pin) gpio_put(pin, !gpio_get(pin))
-#endif
-
-  void directflush_rgb565(int y1, int y2, uint16_t * buf) {
-    // flush a rgb565 buffer, for lvgl display flush callback
-    // support partial (line) update
-    // y1: lvgl area->y1
-    // y2: lvgl area->y2
-    uint16_t * pixelpointer = buf;
-    uint16_t cpixel, npixel;
-    int i, j;
-    int start = max(0, y1) * 2;
-    int end = min(240, y2 + 1) * 2;
-    digitalWrite(xrst, HIGH); // xrst high, enter update mode
-    delayMicroseconds(20);
-    digitalWrite(vst, HIGH);
-    delayMicroseconds(40);
-    digitalToggle(vck); // vck 1
-    delayMicroseconds(40);
-    digitalWrite(vst, LOW);
-    digitalToggle(vck); // vck 2
-    //delayMicroseconds(1);
-    for (i = 0; i < 486; i++) {
-      if (i >= start && i < end) {
-        digitalWrite(hst, HIGH);
-        digitalToggle(hck); // hck 1
-        digitalWrite(hst, LOW);
-        if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
-        for (j = 0; j < 120; j++) {
-          if (j == 20) digitalWrite(enb, LOW);
-          //pixelpointer = buf + (240 * ((i - start) / 2)) + j * 2;
-          cpixel = *pixelpointer;
-          npixel = *(pixelpointer + 1);
-          pixelpointer = pixelpointer + 2;
-          if (i % 2 == 1) { // SPB
-            digitalWriteFast(r1, (cpixel & 0x4000)); // (1 << 14)
-            digitalWriteFast(g1, (cpixel & 0x0200)); // (1 << 9)
-            digitalWriteFast(b1, (cpixel & 0x0008)); // (1 << 3)
-            digitalWriteFast(r2, (npixel & 0x4000));
-            digitalWriteFast(g2, (npixel & 0x0200));
-            digitalWriteFast(b2, (npixel & 0x0008));
-          }
-          else { // LPB
-            digitalWriteFast(r1, (cpixel & 0x8000)); // (1 << 15)
-            digitalWriteFast(g1, (cpixel & 0x0400)); // (1 << 10)
-            digitalWriteFast(b1, (cpixel & 0x0010)); // (1 << 4)
-            digitalWriteFast(r2, (npixel & 0x8000));
-            digitalWriteFast(g2, (npixel & 0x0400));
-            digitalWriteFast(b2, (npixel & 0x0010));
-            if (j == 119) pixelpointer = pixelpointer - 240; // LPB done, then SPB
-          }
-          //delayMicroseconds(1);
-          digitalToggle(hck); // hck 2~121
-        }
-        //delayMicroseconds(1);
-        digitalToggle(vck); // vck 3~482 中的有效数据刷新部分
-        digitalToggle(hck); // hck 122
-      }
-      else {
-        if (i == end) {
-          digitalWrite(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
-          delayMicroseconds(40);
-          digitalWrite(enb, LOW);
-        }
-        if (i == 484) digitalWrite(xrst, LOW); // xrst low, exit update mode
-        delayMicroseconds(1);
-        digitalToggle(vck); // vck 3~488 中的无数据部分
-      }
-    }
-  }
-
-#ifdef ARDUINO_ARCH_RP2040
-  // end fast draw on rp2040
-  #undef digitalWrite
-  #undef digitalToggle
-  #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
-#endif
-
-
-  // by chatgpt with my modification
-  uint16_t quantize_rgb565_dithered(uint16_t rgb565, int x, int y) {
-    // uint8_t r2 = bayer_lut[((rgb565 >> 11) & 0x1F) << 1][y & 3][x & 3];
-    // uint8_t g2 = bayer_lut[((rgb565 >> 5) & 0x3F)][y & 3][x & 3];
-    // uint8_t b2 = bayer_lut[(rgb565 & 0x1F) << 1][y & 3][x & 3];
-    uint8_t r2 = (compressed_bayer_lut[((rgb565 >> 11) & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
-    uint8_t g2 = (compressed_bayer_lut[((rgb565 >> 5) & 0x3F)] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
-    uint8_t b2 = (compressed_bayer_lut[(rgb565 & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
-    return (r2 << 14) | (g2 << 9) | (b2 << 3);
-    // return (r2 << 4) | (g2 << 2) | b2;
-  }
-
-};
 
 // 传输刷新块信息
 // 用于双核刷新加速
@@ -349,15 +116,15 @@ void my_joystick_read( lv_indev_t * indev, lv_indev_data_t * data )
   int ax, ay;
   ay = analogRead(A0);
   ax = analogRead(A1);
-  Serial.print(ax);
-  Serial.print(' ');
-  Serial.print(ay);
+  // Serial.print(ax);
+  // Serial.print(' ');
+  // Serial.print(ay);
   Serial.print(' ');
   if (abs(lax - ax) <= JOYSITCK_READ_THRESHOLD) ax = lax; else lax = ax;
   if (abs(lay - ay) <= JOYSITCK_READ_THRESHOLD) ay = lay; else lay = ay;
-  Serial.print(ax);
-  Serial.print(' ');
-  Serial.println(ay);
+  // Serial.print(ax);
+  // Serial.print(' ');
+  // Serial.println(ay);
   int px, py;
   px = 240 - int((1.0 * min(ax, 4096) / 4096) * 240);
   py = int((1.0 * min(ay, 4096) / 4096) * 240);
@@ -418,7 +185,7 @@ void setup() {
   lv_indev_set_cursor(mouse_indev, cursor_obj);
 
   lv_demo_widgets();
-  //lv_example_image_2();
+  //lv_example_scale_6();
   //lv_demo_benchmark();
 
   Serial.println("Setup done");
