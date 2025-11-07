@@ -16,11 +16,13 @@
 
 [LPM012M134B_lib](LPM012M134B_lib) 尝试写成 Arduino 库，请复制或软链接到 Arduino/librarys 文件夹中。
 
-[sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
+[sketch_lpm_lib_basic_test](sketch_lpm_lib_basic_test) Arduino 库基本功能测试代码。
 
 [sketch_LPM_uGUI_test](sketch_LPM_uGUI_test) 接入 uGUI 库的实验
 
 [sketch_lpm_lvgl_test](sketch_lpm_lvgl_test) 接入 LVGL 的实验
+
+[sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 
 ## 基本信息
 
