@@ -1,6 +1,19 @@
 #include "lpm012m134b.h"
 #include "Arduino.h"
 
+// compressed 6-bit gray to 2-bit gray bayer dither LUT
+// useage : (compressed_bayer_lut[6bitgray] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3
+const uint32_t LPM012M134B::compressed_bayer_lut[64] = {
+	0, 1, 1048577, 1048593, 1048593, 1114129, 1115153, 1074856977,
+	1074856977, 1074873361, 1141982225, 1141982229, 1141982229, 1146176533, 1146176597, 1146438741,
+	1146438741, 1146438997, 1414874453, 1414878549, 1414878549, 1431655765, 1431655766, 1432704342,
+	1432704358, 1432704358, 1432769894, 1432770918, 2506512742, 2506512742, 2506529126, 2573637990,
+	2573637994, 2573637994, 2577832298, 2577832362, 2578094506, 2578094506, 2578094762, 2846530218,
+	2846534314, 2846534314, 2863311530, 2863311531, 2864360107, 2864360107, 2864360123, 2864425659,
+	2864426683, 2864426683, 3938168507, 3938184891, 4005293755, 4005293755, 4005293759, 4009488063,
+	4009488127, 4009488127, 4009750271, 4009750527, 4278185983, 4278185983, 4278190079, 4294967295,
+};
+
 LPM012M134B::LPM012M134B(int vst, int vck, int enb, int xrst, int frp, int xfrp,
 int hst, int hck, int r1, int r2, int g1, int g2, int b1, int b2):
 vst(vst), vck(vck), enb(enb), xrst(xrst), frp(frp), xfrp(xfrp), hst(hst), hck(hck),
@@ -258,6 +271,78 @@ void LPM012M134B::drawEllipse(int xc, int yc, int a, int b, int8_t rgb222) {
 		}
 	}
 }
+
+// draw RGB565 colord shape with bayer dither
+void LPM012M134B::drawPixelRGB565(int x, int y, uint16_t rgb565) {
+	drawPixel(x, y, rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x, y)));
+}
+
+void LPM012M134B::drawFastHLineRGB565(int x, int y, int w, uint16_t rgb565) {
+	if (y < 0 || y >= 240) return;
+	int endv = min(x + w, 240);
+	for(int i = max(x, 0); i < endv; i++) {
+		framebuffer[y][i] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, i, y));
+	}
+}
+
+void LPM012M134B::drawFastVLineRGB565(int x, int y, int h, uint16_t rgb565) {
+	if (x < 0 || x >= 240) return;
+	int endv = min(y + h, 240);
+	for(int i = max(y, 0); i < endv; i++) {
+		framebuffer[i][x] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x, i));
+	}
+}
+
+void LPM012M134B::drawLineRGB565(int x0, int y0, int x1, int y1, uint16_t rgb565) {
+	int dx = abs(x1 - x0);
+	int sx = x0 < x1 ? 1 : -1;
+	int dy = -abs(y1 - y0);
+	int sy = y0 < y1 ? 1 : -1;
+	int err = dx + dy; // error value e_xy
+
+	while (true) {
+		if (!(x0 < 0 || x0 >= 240 || y0 < 0 || y0 >= 240)) {
+			framebuffer[y0][x0] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x0, y0));
+		}
+		if (x0 == x1 && y0 == y1) break;
+		int e2 = 2 * err;
+		if (e2 >= dy) {
+			err += dy;
+			x0 += sx;
+		}
+		if (e2 <= dx) {
+			err += dx;
+			y0 += sy;
+		}
+	}
+}
+
+void LPM012M134B::drawRectRGB565(int x, int y, int w, int h, uint16_t rgb565) {
+	int endv = min(y + h, 240);
+	for (int i = max(y, 0); i < endv; i++) {
+		drawFastHLineRGB565(x, i, w, rgb565);
+	}
+}
+
+void LPM012M134B::drawEllipseRGB565(int xc, int yc, int a, int b, uint16_t rgb565) {
+	for (int y = -b; y <= b; y++) {
+		for (int x = -a; x <= a; x++) {
+			// 标准椭圆方程：(x² / a²) + (y² / b²) <= 1
+			if ((x * x) * (b * b) + (y * y) * (a * a) <= (a * a) * (b * b)) {
+				int px = xc + x;
+				int py = yc + y;
+				if (px >= 0 && px < 240 && py >= 0 && py < 240) {
+					framebuffer[py][px] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, px, py));
+				}
+			}
+		}
+	}
+}
+
+void LPM012M134B::fillRGB565(uint16_t rgb565) {
+	drawRectRGB565(0, 0, 240, 240, rgb565);
+}
+
 #endif //LPM012134B_USE_FRAMEBUFFER
 
 #if _DWF_CUSTOM
@@ -274,4 +359,8 @@ uint16_t LPM012M134B::quantize_rgb565_dithered(uint16_t rgb565, int x, int y) {
 	uint8_t b2 = (compressed_bayer_lut[(rgb565 & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
 	return (r2 << 14) | (g2 << 9) | (b2 << 3);
 	// return (r2 << 4) | (g2 << 2) | b2;
+}
+
+int8_t LPM012M134B::rgb565_to_rgb222(uint16_t rgb565) {
+	return ((rgb565 >> 10) & 0b110000) | ((rgb565 >> 7) & 0b001100) | ((rgb565 >> 3) & 0b000011);
 }
