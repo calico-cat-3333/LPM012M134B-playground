@@ -1,5 +1,4 @@
-#include "pico/stdlib.h"
-#include "hardware/pwm.h"
+#include "stdint.h"
 #include "lpm012m134b.h"
 extern "C" {
   #include "ugui.h"
