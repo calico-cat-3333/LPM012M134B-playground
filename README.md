@@ -22,6 +22,8 @@
 
 [sketch_lpm_lvgl_test](sketch_lpm_lvgl_test) 接入 LVGL 的实验
 
+[sketch_lpm_adafruitgfx_test](sketch_lpm_adafruitgfx_test) 接入 AdafruitGFX 的实验
+
 [sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 
 ## 基本信息
