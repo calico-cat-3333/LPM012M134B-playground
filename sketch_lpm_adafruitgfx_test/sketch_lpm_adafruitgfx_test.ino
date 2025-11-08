@@ -62,8 +62,9 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     }
 
     void update_flush_area(int s, int h) {
+      if (flush_height != 0) flush_height = flush_height + flush_start; // actually this is endy
       if (s < flush_start) flush_start = s;
-      flush_height = max(s + h, flush_height + flush_start) - flush_start;
+      flush_height = max(s + h, flush_height) - flush_start;
     }
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) {
@@ -138,6 +139,11 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     }
 
     void endWrite(void) {
+      // Serial.print(rotation);
+      // Serial.print(' ');
+      // Serial.print(flush_start);
+      // Serial.print(' ');
+      // Serial.println(flush_height);
       lpm.flush(flush_start, flush_height);
       // lpm.flush();
     }
@@ -247,6 +253,7 @@ void loop(void) {
   for(uint8_t rotation=0; rotation<4; rotation++) {
     tft.setRotation(rotation);
     testText();
+    delay(1000);
     testTriangles();
     delay(1000);
   }
