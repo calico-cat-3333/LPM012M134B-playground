@@ -8,9 +8,9 @@
 #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 
 // 打印刷新函数的耗时，注意会导致无法双缓冲刷新。
-#define PRINT_TIMEUSE 0
-// 是否使用核心 1 执行屏幕刷新
-#define USE_CORE1_FLUSH 1
+#define PRINT_TIMEUSE 1
+// 是否使用核心 1 执行屏幕刷新，在 RP2350 上不能工作，原因正在调查。
+#define USE_CORE1_FLUSH 0
 // 摇杆判定移动阈值
 #define JOYSITCK_READ_THRESHOLD 20
 
@@ -60,7 +60,7 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
   Serial.print(" us for ");
   Serial.print(area->y2 - area->y1 + 1);
   Serial.println(" lines");
-#endif
+#endif // PRINT_TIMEUSE
 }
 #else
 void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
@@ -78,12 +78,16 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
   }
   lpm.directflush_rgb565(area->y1, area->y2, bufs);
   unsigned long end = micros();
-  Serial.print("flush timeuse ");
+#if PRINT_TIMEUSE
+  Serial.print("Core0: flush timeuse ");
   Serial.print(end - start);
-  Serial.println(" us");
+  Serial.print(" us for ");
+  Serial.print(area->y2 - area->y1 + 1);
+  Serial.println(" lines");
+#endif // PRINT_TIMEUSE
   lv_display_flush_ready(disp);
 }
-#endif
+#endif // USE_CORE1_FLUSH
 
 /*Read the joystick*/
 // int posx = 120;
@@ -119,7 +123,7 @@ void my_joystick_read( lv_indev_t * indev, lv_indev_data_t * data )
   // Serial.print(ax);
   // Serial.print(' ');
   // Serial.print(ay);
-  Serial.print(' ');
+  // Serial.print(' ');
   if (abs(lax - ax) <= JOYSITCK_READ_THRESHOLD) ax = lax; else lax = ax;
   if (abs(lay - ay) <= JOYSITCK_READ_THRESHOLD) ay = lay; else lay = ay;
   // Serial.print(ax);
@@ -129,7 +133,7 @@ void my_joystick_read( lv_indev_t * indev, lv_indev_data_t * data )
   px = 240 - int((1.0 * min(ax, 4096) / 4096) * 240);
   py = int((1.0 * min(ay, 4096) / 4096) * 240);
 
-  bool ntouched = bool(digitalRead(24)) and bool(digitalRead(15)) and bool(digitalRead(22));
+  bool ntouched = bool(digitalRead(15)) and bool(digitalRead(22));
   data->point.x = px;
   data->point.y = py;
   if(ntouched) {
@@ -159,8 +163,18 @@ lv_display_t * disp;
 void setup() {
   Serial.begin();
 
-  pinMode(24, INPUT_PULLUP);
+  //pinMode(24, INPUT);
+  pinMode(20, INPUT);
+  pinMode(21, INPUT);
+  pinMode(15, INPUT);
+  pinMode(22, INPUT);
   analogReadResolution(12);
+
+#if USE_CORE1_FLUSH != 1
+  pinMode(bl, OUTPUT);
+  digitalWrite(bl, HIGH);
+  lpm.init();
+#endif // USE_CORE_FLUSH != 1
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
@@ -212,6 +226,9 @@ void loop() {
   delay(5); /* let this time pass */
 }
 
+#if USE_CORE1_FLUSH
+
+// 有这条语句疑似导致 RP2350 卡死，但 RP2040 上没有这条语句也会卡死（甚至哪怕没有启用核心 1）（太怪了）
 bool core1_separate_stack = true;
 
 void setup1() {
@@ -220,7 +237,6 @@ void setup1() {
   lpm.init();
 }
 
-#if USE_CORE1_FLUSH
 void loop1(){
   rp2040.fifo.pop();
   uint16_t * buf16 = (*prfa1).buf;
@@ -229,7 +245,7 @@ void loop1(){
   int y2 = (*prfa1).y2;
 #if PRINT_TIMEUSE
   unsigned long start = micros();
-#endif
+#endif // PRINT_TIMEUSE
   if (use_bayer) {
     for (int i = y1; i <= y2; i++) {
       for (int j = 0; j <= 239; j++) {
@@ -242,7 +258,7 @@ void loop1(){
 #if PRINT_TIMEUSE
   unsigned long end = micros();
   rp2040.fifo.push(end - start);
-#endif
+#endif // PRINT_TIMEUSE
   lv_display_flush_ready(disp);
 }
-#endif
+#endif // USE_CORE1_FLUSH
