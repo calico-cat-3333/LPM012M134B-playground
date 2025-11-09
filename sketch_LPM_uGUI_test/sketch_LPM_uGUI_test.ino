@@ -27,7 +27,7 @@ void setup() {
   pinMode(bl, OUTPUT);
   digitalWrite(bl, HIGH);
 
-  pinMode(key, INPUT_PULLUP);
+  pinMode(key, INPUT);
 
   randomSeed(micros());
   lpm.init();
