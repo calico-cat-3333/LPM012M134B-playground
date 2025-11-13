@@ -2,7 +2,7 @@
 
 此版本可以在测试电路板上运行。仅在 RP2040 和 RP2350 上测试过。（必须使用 xFRP 硬件反相）
 
-在 RP2350 上，目前开启核心 1 刷屏（`#define USE_CORE_FLUSH 1`）后，整个开发板卡死，原因正在调查，目前请使用 `#define USE_CORE_FLUSH 0` （即使是这样性能似乎依然比 RP2040 好）
+在 RP2350 上，开启核心 1 刷屏（`#define USE_CORE_FLUSH 1`）后，分配的绘制缓冲区不会对齐到 4 导致 LVGL 卡在配置缓冲区阶段，目前已通过添加 `alignas(LV_DRAW_BUF_ALIGN)` 解决。
 
 支持局部刷新，使用 Bayer 抖动改善显示效果。
 

@@ -8,9 +8,10 @@
 #define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 
 // 打印刷新函数的耗时，注意会导致无法双缓冲刷新。
-#define PRINT_TIMEUSE 1
-// 是否使用核心 1 执行屏幕刷新，在 RP2350 上不能工作，原因正在调查。
-#define USE_CORE1_FLUSH 0
+#define PRINT_TIMEUSE 0
+// 是否使用核心 1 执行屏幕刷新，在 RP2350 上不能工作，原因似乎是 RP2350 在开启核心 1 后缓冲区未对齐导致 LVGL 报错：（已解决）
+// [Error]	(1.009, +1009)	 lv_display_set_buffers: Asserted at expression: buf1 == lv_draw_buf_align(buf1, cf) buf1 is not aligned: 0x20013093 lv_display.c:475
+#define USE_CORE1_FLUSH 1
 // 摇杆判定移动阈值
 #define JOYSITCK_READ_THRESHOLD 20
 
@@ -33,8 +34,9 @@ LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
 
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
 #define DRAW_BUF_SIZE (TFT_HOR_RES * TFT_VER_RES / 4 * (LV_COLOR_DEPTH / 8))
-uint8_t draw_buf1[DRAW_BUF_SIZE];
-uint8_t draw_buf2[DRAW_BUF_SIZE];
+// 指定缓冲区对齐，在 RP2350 开启双核刷新上是必须的。
+alignas(LV_DRAW_BUF_ALIGN) uint8_t draw_buf1[DRAW_BUF_SIZE];
+alignas(LV_DRAW_BUF_ALIGN) uint8_t draw_buf2[DRAW_BUF_SIZE];
 
 #if LV_USE_LOG != 0
 void my_print( lv_log_level_t level, const char * buf )
@@ -202,7 +204,7 @@ void setup() {
   //lv_example_scale_6();
   //lv_demo_benchmark();
 
-  Serial.println("Setup done");
+  Serial.println("Core0: Setup done");
 }
 
 bool key2_lt = true;
@@ -228,13 +230,13 @@ void loop() {
 
 #if USE_CORE1_FLUSH
 
-// 有这条语句疑似导致 RP2350 卡死，但 RP2040 上没有这条语句也会卡死（甚至哪怕没有启用核心 1）（太怪了）
 bool core1_separate_stack = true;
 
 void setup1() {
   pinMode(bl, OUTPUT);
   digitalWrite(bl, HIGH);
   lpm.init();
+  Serial.println("Core1: Setup done");
 }
 
 void loop1(){
