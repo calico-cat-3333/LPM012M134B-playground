@@ -9,8 +9,7 @@
 
 // 打印刷新函数的耗时，注意会导致无法双缓冲刷新。
 #define PRINT_TIMEUSE 0
-// 是否使用核心 1 执行屏幕刷新，在 RP2350 上不能工作，原因似乎是 RP2350 在开启核心 1 后缓冲区未对齐导致 LVGL 报错：（已解决）
-// [Error]	(1.009, +1009)	 lv_display_set_buffers: Asserted at expression: buf1 == lv_draw_buf_align(buf1, cf) buf1 is not aligned: 0x20013093 lv_display.c:475
+// 是否使用核心 1 执行屏幕刷新
 #define USE_CORE1_FLUSH 1
 // 摇杆判定移动阈值
 #define JOYSITCK_READ_THRESHOLD 20
