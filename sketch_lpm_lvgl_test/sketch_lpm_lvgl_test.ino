@@ -70,14 +70,9 @@ void my_disp_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
   uint16_t * bufs = buf16;
   unsigned long start = micros();
   if (use_bayer) {
-    for (int i = area->y1; i <= area->y2; i++) {
-      for (int j = area->x1; j <= area->x2; j++) {
-        *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
-        buf16 ++;
-      }
-    }
+    lpm.bayer_dither_buffer(0, area->y1, 240, area->y2 - area->y1 + 1, buf16);
   }
-  lpm.directflush_rgb565(area->y1, area->y2, bufs);
+  lpm.flush_buffer_rgb565(area->y1, area->y2, bufs);
   unsigned long end = micros();
 #if PRINT_TIMEUSE
   Serial.print("Core0: flush timeuse ");
@@ -248,14 +243,9 @@ void loop1(){
   unsigned long start = micros();
 #endif // PRINT_TIMEUSE
   if (use_bayer) {
-    for (int i = y1; i <= y2; i++) {
-      for (int j = 0; j <= 239; j++) {
-        *buf16 = lpm.quantize_rgb565_dithered(*buf16, j, i);
-        buf16 ++;
-      }
-    }
+    lpm.bayer_dither_buffer(0, y1, 240, y2 - y1 + 1, buf16);
   }
-  lpm.directflush_rgb565(y1, y2, bufs);
+  lpm.flush_buffer_rgb565(y1, y2, bufs);
 #if PRINT_TIMEUSE
   unsigned long end = micros();
   rp2040.fifo.push(end - start);

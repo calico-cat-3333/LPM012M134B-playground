@@ -67,7 +67,7 @@ void LPM012M134B::init() {
 	#define _DT_CUSTOM 1
 #endif
 
-void LPM012M134B::directflush_rgb565(int y1, int y2, uint16_t * buf) {
+void LPM012M134B::flush_buffer_rgb565(int y1, int y2, uint16_t * buf) {
 	// flush a rgb565 buffer, for lvgl display flush callback
 	// support partial (line) update
 	// y1: lvgl area->y1
@@ -274,14 +274,14 @@ void LPM012M134B::drawEllipse(int xc, int yc, int a, int b, int8_t rgb222) {
 
 // draw RGB565 colord shape with bayer dither
 void LPM012M134B::drawPixelRGB565(int x, int y, uint16_t rgb565) {
-	drawPixel(x, y, rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x, y)));
+	drawPixel(x, y, rgb565_to_rgb222(bayer_dither_point(x, y, rgb565)));
 }
 
 void LPM012M134B::drawFastHLineRGB565(int x, int y, int w, uint16_t rgb565) {
 	if (y < 0 || y >= 240) return;
 	int endv = min(x + w, 240);
 	for(int i = max(x, 0); i < endv; i++) {
-		framebuffer[y][i] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, i, y));
+		framebuffer[y][i] = rgb565_to_rgb222(bayer_dither_point(i, y, rgb565));
 	}
 }
 
@@ -289,7 +289,7 @@ void LPM012M134B::drawFastVLineRGB565(int x, int y, int h, uint16_t rgb565) {
 	if (x < 0 || x >= 240) return;
 	int endv = min(y + h, 240);
 	for(int i = max(y, 0); i < endv; i++) {
-		framebuffer[i][x] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x, i));
+		framebuffer[i][x] = rgb565_to_rgb222(bayer_dither_point(x, i, rgb565));
 	}
 }
 
@@ -302,7 +302,7 @@ void LPM012M134B::drawLineRGB565(int x0, int y0, int x1, int y1, uint16_t rgb565
 
 	while (true) {
 		if (!(x0 < 0 || x0 >= 240 || y0 < 0 || y0 >= 240)) {
-			framebuffer[y0][x0] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, x0, y0));
+			framebuffer[y0][x0] = rgb565_to_rgb222(bayer_dither_point(x0, y0, rgb565));
 		}
 		if (x0 == x1 && y0 == y1) break;
 		int e2 = 2 * err;
@@ -332,7 +332,7 @@ void LPM012M134B::drawEllipseRGB565(int xc, int yc, int a, int b, uint16_t rgb56
 				int px = xc + x;
 				int py = yc + y;
 				if (px >= 0 && px < 240 && py >= 0 && py < 240) {
-					framebuffer[py][px] = rgb565_to_rgb222(quantize_rgb565_dithered(rgb565, px, py));
+					framebuffer[py][px] = rgb565_to_rgb222(bayer_dither_point(px, py, rgb565));
 				}
 			}
 		}
@@ -353,12 +353,21 @@ void LPM012M134B::fillRGB565(uint16_t rgb565) {
 	#undef digitalToggle
 #endif
 
-uint16_t LPM012M134B::quantize_rgb565_dithered(uint16_t rgb565, int x, int y) {
+uint16_t LPM012M134B::bayer_dither_point(int x, int y, uint16_t rgb565) {
 	uint8_t r2 = (compressed_bayer_lut[((rgb565 >> 11) & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
 	uint8_t g2 = (compressed_bayer_lut[((rgb565 >> 5) & 0x3F)] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
 	uint8_t b2 = (compressed_bayer_lut[(rgb565 & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
 	return (r2 << 14) | (g2 << 9) | (b2 << 3);
 	// return (r2 << 4) | (g2 << 2) | b2;
+}
+
+void LPM012M134B::bayer_dither_buffer(int x, int y, int w, int h, uint16_t * buf) {
+	for (int i = y; i < y + h; i++) {
+		for (int j = x; j < x + w; j++) {
+			*buf = bayer_dither_point(j, i, *buf);
+			buf++;
+		}
+	}
 }
 
 int8_t LPM012M134B::rgb565_to_rgb222(uint16_t rgb565) {

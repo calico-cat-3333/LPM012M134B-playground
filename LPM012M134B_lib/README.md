@@ -4,9 +4,17 @@
 
 提供 API:
 
-### `void directflush_rgb565(int y1, int y2, uint16_t *buf)`
+### `LPM012M134B(int vst, int vck, int enb, int xrst, int frp, int xfrp, int hst, int hck, int r1, int r2, int g1, int g2, int b1, int b2)`
 
-将一个 rgb565 格式的缓冲区刷新到屏幕，缓冲区的宽度必须为 240, y1 为目标区域开始行, y2 为目标区域结束行。
+构造函数。参数为引脚编号。
+
+### `void init()`
+
+初始化设备。
+
+### `void flush_buffer_rgb565(int y1, int y2, uint16_t *buf)`
+
+将一个 RGB565 格式的缓冲区刷新到屏幕，缓冲区的宽度必须为 240, y1 为目标区域开始行, y2 为目标区域结束行。
 
 这个函数主要是给 lvgl flush callback 用的，这种情况下 y1 = area.y1, y2 = area.y2, buf = px_map, 并需要使用如下代码确保缓冲区宽度为 240：
 
@@ -23,9 +31,13 @@ void rounder_event_cb(lv_event_t * e)
 lv_display_add_event_cb(disp, rounder_event_cb, LV_EVENT_INVALIDATE_AREA, NULL);
 ```
 
-### `uint16_t quantize_rgb565_dithered(uint16_t rgb565, int x, int y)`
+### `uint16_t bayer_dither_point(int x, int y, uint16_t rgb565)`
 
 计算对位置为 x, y 的点使用 bayer 抖动后的颜色，注意，返回值为 RGB565 格式。
+
+### `void bayer_dither_buffer(int x, int y, int w, int h, uint16_t * buf)`
+
+对将绘制到 x, y, 高度宽度为 w, h 的 RGB565 格式的缓冲区 buf 做 bayer 抖动处理，此函数将直接修改 buf 缓冲区。
 
 ### `int8_t rgb565_to_rgb222(uint16_t rgb565)`
 

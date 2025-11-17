@@ -61,9 +61,11 @@ class LPM012M134B {
 
 		#endif // LPM012M134B_USE_FRAMEBUFFER
 
-		void directflush_rgb565(int y1, int y2, uint16_t * buf);
+		void flush_buffer_rgb565(int y1, int y2, uint16_t * buf);
 
-		uint16_t quantize_rgb565_dithered(uint16_t rgb565, int x, int y);
+		uint16_t bayer_dither_point(int x, int y, uint16_t rgb565);
+
+		void bayer_dither_buffer(int x, int y, int w, int h, uint16_t * buf);
 
 		int8_t rgb565_to_rgb222(uint16_t rgb565);
 
