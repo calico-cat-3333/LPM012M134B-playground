@@ -28,6 +28,7 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     int flush_start;
     int flush_height;
     uint8_t rotation;
+    bool use_bayer;
 
     void soft_rotation(int16_t &x, int16_t &y) {
       int xo = x;
@@ -67,8 +68,8 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) {
       soft_rotation(x, y);
-      lpm.drawPixel(x, y, lpm.rgb565_to_rgb222(color));
-      // lpm.drawPixelRGB565(x, y, color);
+      if (!use_bayer) lpm.drawPixel(x, y, lpm.rgb565_to_rgb222(color));
+      else lpm.drawPixelRGB565(x, y, color);
       lpm.flush(y, 1);
     }
 
@@ -79,8 +80,8 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
 
     void writePixel(int16_t x, int16_t y, uint16_t color) {
       soft_rotation(x, y);
-      lpm.drawPixel(x, y, lpm.rgb565_to_rgb222(color));
-      // lpm.drawPixelRGB565(x, y, color);
+      if (!use_bayer) lpm.drawPixel(x, y, lpm.rgb565_to_rgb222(color));
+      else lpm.drawPixelRGB565(x, y, color);
       update_flush_area(y, 1);
     }
 
@@ -93,8 +94,8 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
       }
       if (rotation == 1 || rotation == 2) x = x - w + 1;
       if (rotation == 3 || rotation == 2) y = y - h + 1; 
-      lpm.drawRect(x, y, w, h, lpm.rgb565_to_rgb222(color));
-      // lpm.drawRectRGB565(x, y, w, h, color);
+      if (!use_bayer) lpm.drawRect(x, y, w, h, lpm.rgb565_to_rgb222(color));
+      else lpm.drawRectRGB565(x, y, w, h, color);
       update_flush_area(y, h);
     }
 
@@ -102,13 +103,14 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
       soft_rotation(x, y);
       if (rotation == 0 || rotation == 2) {
         if (rotation == 2) y = y - h + 1;
-        lpm.drawFastVLine(x, y, h, lpm.rgb565_to_rgb222(color));
+        if (!use_bayer) lpm.drawFastVLine(x, y, h, lpm.rgb565_to_rgb222(color));
+		else lpm.drawFastVLineRGB565(x, y, h, color);
         update_flush_area(y, h);
       }
       else {
         if (rotation == 3) x = x - h + 1;
-        lpm.drawFastHLine(x, y, h, lpm.rgb565_to_rgb222(color));
-        // lpm.drawFastVLineRGB565(x, y, h, color);
+        if (!use_bayer) lpm.drawFastHLine(x, y, h, lpm.rgb565_to_rgb222(color));
+        else lpm.drawFastHLineRGB565(x, y, h, color);
         update_flush_area(y, 1);
       }
     }
@@ -117,13 +119,14 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
       soft_rotation(x, y);
       if (rotation == 0 || rotation == 2) {
         if (rotation == 2) x = x - w + 1;
-        lpm.drawFastHLine(x, y, w, lpm.rgb565_to_rgb222(color));
+        if (!use_bayer) lpm.drawFastHLine(x, y, w, lpm.rgb565_to_rgb222(color));
+        else lpm.drawFastHLineRGB565(x, y, w, color);
         update_flush_area(y, 1);
       }
       else {
         if (rotation == 3) y = y - w + 1;
-        lpm.drawFastVLine(x, y, w, lpm.rgb565_to_rgb222(color));
-        // lpm.drawFastHLineRGB565(x, y, w, color);
+        if (!use_bayer) lpm.drawFastVLine(x, y, w, lpm.rgb565_to_rgb222(color));
+        else lpm.drawFastVLineRGB565(x, y, w, color);
         update_flush_area(y, w);
       }
     }
@@ -131,8 +134,8 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     void writeLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
       soft_rotation(x0, y0);
       soft_rotation(x1, y1);
-      lpm.drawLine(x0, y0, x1, y1, lpm.rgb565_to_rgb222(color));
-      // lpm.drawLineRGB565(x0, y0, x1, y1, color);
+      if (!use_bayer) lpm.drawLine(x0, y0, x1, y1, lpm.rgb565_to_rgb222(color));
+      else lpm.drawLineRGB565(x0, y0, x1, y1, color);
       update_flush_area(min(y0, y1), abs(y1 - y0) + 1);
     }
 
@@ -166,14 +169,18 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
 
     void fillScreen(uint16_t color) {
       startWrite();
-      lpm.fill(lpm.rgb565_to_rgb222(color));
-      // lpm.fillRGB565(color);
+      if (!use_bayer) lpm.fill(lpm.rgb565_to_rgb222(color));
+      else lpm.fillRGB565(color);
       update_flush_area(0, 240);
       endWrite();
     }
 
     void setRotation(uint8_t r) {
       rotation = r;
+    }
+
+    void setEnableBayerDither(bool en) {
+      use_bayer = en;
     }
 
     uint16_t color565(uint8_t red, uint8_t green, uint8_t blue) {

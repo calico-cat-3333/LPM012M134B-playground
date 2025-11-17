@@ -16,7 +16,9 @@ void setup() {
   digitalWrite(LCD_BL, HIGH);
  
   tft.begin();
-  
+}
+
+void benchmark() {
   Serial.println(F("Benchmark                Time (microseconds)"));
   delay(10);
   Serial.print(F("Screen fill              "));
@@ -74,9 +76,14 @@ void setup() {
 void loop(void) {
   for(uint8_t rotation=0; rotation<4; rotation++) {
     tft.setRotation(rotation);
-    testText();
-    delay(1000);
-    testTriangles();
+    Serial.print("Set Rotation: ");
+    Serial.println(rotation);
+    Serial.println("Disable Bayer Dither");
+    tft.setEnableBayerDither(false);
+    benchmark();
+    Serial.println("Enable Bayer Dither");
+    tft.setEnableBayerDither(true);
+    benchmark();
     delay(1000);
   }
 }
