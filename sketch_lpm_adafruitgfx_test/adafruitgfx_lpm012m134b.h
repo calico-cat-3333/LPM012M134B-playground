@@ -104,11 +104,11 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
       if (rotation == 0 || rotation == 2) {
         if (rotation == 2) y = y - h + 1;
         if (!use_bayer) lpm.drawFastVLine(x, y, h, lpm.rgb565_to_rgb222(color));
-		else lpm.drawFastVLineRGB565(x, y, h, color);
+        else lpm.drawFastVLineRGB565(x, y, h, color);
         update_flush_area(y, h);
       }
       else {
-        if (rotation == 3) x = x - h + 1;
+        if (rotation == 1) x = x - h + 1;
         if (!use_bayer) lpm.drawFastHLine(x, y, h, lpm.rgb565_to_rgb222(color));
         else lpm.drawFastHLineRGB565(x, y, h, color);
         update_flush_area(y, 1);
