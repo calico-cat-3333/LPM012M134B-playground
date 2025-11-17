@@ -86,6 +86,14 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     }
 
     void writeFillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
+      if (w < 0) {
+        w = -w;
+        x = x - w + 1;
+      }
+      if (h < 0) {
+        h = -h;
+        y = y - h + 1;
+      }
       soft_rotation(x, y);
       if (rotation == 1 || rotation == 3) {
         int t = w;
@@ -100,6 +108,10 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     }
 
     void writeFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
+      if (h < 0) {
+        h = -h;
+        y = y - h + 1;
+      }
       soft_rotation(x, y);
       if (rotation == 0 || rotation == 2) {
         if (rotation == 2) y = y - h + 1;
@@ -116,6 +128,10 @@ class Adafruit_GFX_LPM012M134B: public Adafruit_GFX {
     }
 
     void writeFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
+      if (w < 0) {
+        w = -w;
+        x = x - w + 1;
+      }
       soft_rotation(x, y);
       if (rotation == 0 || rotation == 2) {
         if (rotation == 2) x = x - w + 1;
