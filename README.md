@@ -1,6 +1,8 @@
 # LPM012M134B 试验场
 
-与 LPM012M134B 显示屏相关的测试电路和代码。目前仅在 RP2040 和 RP2350 平台 arduino-pico 上测试过
+与 LPM012M134B 显示屏相关的测试电路和代码。目前仅在 RP2040 和 RP2350 平台 arduino-pico 上测试过。
+
+如无特殊说明，所有代码均仅在测试电路板上测试，并必须使用 xfrp 硬件反相。
 
 [硬件开源](https://oshwhub.com/calico-cat-3333/lpm012m134b_testboard)
 
