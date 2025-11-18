@@ -26,6 +26,8 @@
 
 [sketch_lpm_adafruitgfx_test](sketch_lpm_adafruitgfx_test) 接入 AdafruitGFX 的实验
 
+[sketch_lpm_adafruitgfx_demo](sketch_lpm_adafruitgfx_demo) 另一个 AdafruitGFX 演示代码，修改自 Adafruit ST7789 驱动的演示。
+
 [sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 
 ## 基本信息
