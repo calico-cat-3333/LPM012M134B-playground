@@ -1,4 +1,3 @@
-// Basic full-color example for Adafruit_ST7796S
 // Provides a 16-bit color video framebuffer to which Adafruit_GFX calls can be made.
 
 #include <Adafruit_GFX.h>
