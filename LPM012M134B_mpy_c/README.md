@@ -1,0 +1,9 @@
+# MicroPython C 驱动程序
+
+适用于 MicroPython 的驱动程序，使用 C 编写以提高效率。
+
+尚未完成，等待进一步完善和测试。
+
+目前需要单独为将 frp 引脚启用 PWM.
+
+需重新编译 MicroPython.
