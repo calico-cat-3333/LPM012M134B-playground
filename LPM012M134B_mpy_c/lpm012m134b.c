@@ -12,9 +12,13 @@ static mp_obj_t lpm012m134b_color222(mp_obj_t r_obj, mp_obj_t g_obj, mp_obj_t b_
 }
 static MP_DEFINE_CONST_FUN_OBJ_3(lpm012m134b_color222_obj, lpm012m134b_color222);
 
+static inline uint16_t color565to222(uint16_t rgb565) {	
+	return ((rgb565 >> 10) & 0b110000) | ((rgb565 >> 7) & 0b001100) | ((rgb565 >> 3) & 0b000011);
+}
+
 static mp_obj_t lpm012m134b_color565to222(mp_obj_t color565_obj) {
 	uint16_t rgb565 = mp_obj_get_int(color565_obj);
-	return mp_obj_new_int(((rgb565 >> 10) & 0b110000) | ((rgb565 >> 7) & 0b001100) | ((rgb565 >> 3) & 0b000011));
+	return mp_obj_new_int(color565to222(rgb565));
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(lpm012m134b_color565to222_obj, lpm012m134b_color565to222);
 
@@ -50,7 +54,7 @@ static mp_obj_t lpm012m134b_bayer_dither_buffer(size_t n_args, const mp_obj_t *a
 	
 	mp_buffer_info_t bufinfo;
 	mp_get_buffer_raise(args_in[4], &bufinfo, MP_BUFFER_RW);
-	uint16_t * buf = (uint16_t *)bufinfo.buf;
+	uint16_t *buf = (uint16_t *)bufinfo.buf;
 	bayer_dither_buffer(x, y, w, h, buf);
 
 	return mp_const_none;
@@ -173,7 +177,7 @@ static mp_obj_t lpm012m134b_LPM012M134B_flush_buffer_rgb565(size_t n_args, const
 
 	mp_buffer_info_t bufinfo;
 	mp_get_buffer_raise(args_in[3], &bufinfo, MP_BUFFER_READ);
-	uint16_t * pixelpointer = (uint16_t *)bufinfo.buf;
+	uint16_t *pixelpointer = (uint16_t *)bufinfo.buf;
 	int cnt = 0;
 
 	int start = MAX(0, y1) * 2;
@@ -235,12 +239,56 @@ static mp_obj_t lpm012m134b_LPM012M134B_flush_buffer_rgb565(size_t n_args, const
 	}
 	return mp_const_none;
 }
-static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_flush_buffer_rgb565_obj, 4, 4,  lpm012m134b_LPM012M134B_flush_buffer_rgb565);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_flush_buffer_rgb565_obj, 4, 4, lpm012m134b_LPM012M134B_flush_buffer_rgb565);
+
+static mp_obj_t lpm012m134b_LPM012M134B_blit_buffer(size_t n_args, const mp_obj_t *args_in) {
+	lpm012m134b_LPM012M134B_obj_t *self = MP_OBJ_TO_PTR(args_in[0]);
+	mp_buffer_info_t bufinfo;
+	mp_get_buffer_raise(args_in[1], &bufinfo, MP_BUFFER_READ);
+	uint8_t *source = (uint8_t *)bufinfo.buf;
+	int x = mp_obj_get_int(args_in[2]);
+	int y = mp_obj_get_int(args_in[3]);
+	int h = mp_obj_get_int(args_in[4]);
+	int w = mp_obj_get_int(args_in[5]);
+	for (int i = y; i < y + h; i++) {
+		for (int j = x; j < x + w; j++) {
+			self->framebuffer[i * self->width + j] = *source;
+			source++;
+		}
+	}
+	return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_blit_buffer_obj, 6, 6, lpm012m134b_LPM012M134B_blit_buffer);
+
+static mp_obj_t lpm012m134b_LPM012M134B_blit_buffer_rgb565(size_t n_args, const mp_obj_t *args_in) {
+	lpm012m134b_LPM012M134B_obj_t *self = MP_OBJ_TO_PTR(args_in[0]);
+	mp_buffer_info_t bufinfo;
+	mp_get_buffer_raise(args_in[1], &bufinfo, MP_BUFFER_READ);
+	uint16_t *source = (uint16_t *)bufinfo.buf;
+	int x = mp_obj_get_int(args_in[2]);
+	int y = mp_obj_get_int(args_in[3]);
+	int h = mp_obj_get_int(args_in[4]);
+	int w = mp_obj_get_int(args_in[5]);
+	bool use_bayer = false;
+	if (n_args == 7) {
+		use_bayer = mp_obj_is_true(args_in[6]);
+	}
+	for (int i = y; i < y + h; i++) {
+		for (int j = x; j < x + w; j++) {
+			self->framebuffer[i * self->width + j] = color565to222((use_bayer ? bayer_dither_point(j, i, *source) : *source));
+			source++;
+		}
+	}
+	return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_blit_buffer_rgb565_obj, 6, 7, lpm012m134b_LPM012M134B_blit_buffer_rgb565);
 
 static const mp_rom_map_elem_t lpm012m134b_LPM012M134B_locals_dict_table[] = {
 	{MP_ROM_QSTR(MP_QSTR_init), MP_ROM_PTR(&lpm012m134b_LPM012M134B_init_obj)},
 	{MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&lpm012m134b_LPM012M134B_flush_obj)},
 	{MP_ROM_QSTR(MP_QSTR_flush_buffer_rgb565), MP_ROM_PTR(&lpm012m134b_LPM012M134B_flush_buffer_rgb565_obj)},
+	{MP_ROM_QSTR(MP_QSTR_blit_buffer), MP_ROM_PTR(&lpm012m134b_LPM012M134B_blit_buffer_obj)},
+	{MP_ROM_QSTR(MP_QSTR_blit_buffer_rgb565), MP_ROM_PTR(&lpm012m134b_LPM012M134B_blit_buffer_rgb565_obj)},
 };
 static MP_DEFINE_CONST_DICT(lpm012m134b_LPM012M134B_locals_dict, lpm012m134b_LPM012M134B_locals_dict_table);
 /* methods end */
@@ -314,7 +362,7 @@ mp_obj_t lpm012m134b_LPM012M134B_make_new(const mp_obj_type_t *type,
 	// ----------------------------------------------------------
 	if (args[ARG_fbuf].u_obj != mp_const_none) {
 		mp_buffer_info_t bufinfo;
-		mp_get_buffer_raise(args[ARG_fbuf].u_obj, &bufinfo, MP_BUFFER_READ);
+		mp_get_buffer_raise(args[ARG_fbuf].u_obj, &bufinfo, MP_BUFFER_RW);
 		self->framebuffer = (uint8_t *)bufinfo.buf;
 		self->use_fb = true;
 	}
