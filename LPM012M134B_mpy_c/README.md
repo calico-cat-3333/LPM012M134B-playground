@@ -7,3 +7,5 @@
 目前需要单独为将 frp 引脚启用 PWM.
 
 需重新编译 MicroPython.
+
+lpm012m134b_framebuf.py 是 python 部分的胶水代码，将 framebuf 和屏幕驱动结合。可以参考 framebuffer_test.py 使用。
