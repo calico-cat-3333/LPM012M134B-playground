@@ -1,6 +1,3 @@
-"""RP2040-Touch-LCD-1.28
-"""
-
 import lpm012m134b
 import lvgl as lv
 from machine import PWM, Pin
