@@ -243,6 +243,9 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_flush_buffer_
 
 static mp_obj_t lpm012m134b_LPM012M134B_blit_buffer(size_t n_args, const mp_obj_t *args_in) {
 	lpm012m134b_LPM012M134B_obj_t *self = MP_OBJ_TO_PTR(args_in[0]);
+	if (self->use_fb == false) {
+		mp_raise_ValueError("Framebuffer is disabled, cannot blit buffer to framebuffer!");
+	}
 	mp_buffer_info_t bufinfo;
 	mp_get_buffer_raise(args_in[1], &bufinfo, MP_BUFFER_READ);
 	uint8_t *source = (uint8_t *)bufinfo.buf;
@@ -262,6 +265,9 @@ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_blit_buffer_o
 
 static mp_obj_t lpm012m134b_LPM012M134B_blit_buffer_rgb565(size_t n_args, const mp_obj_t *args_in) {
 	lpm012m134b_LPM012M134B_obj_t *self = MP_OBJ_TO_PTR(args_in[0]);
+	if (self->use_fb == false) {
+		mp_raise_ValueError("Framebuffer is disabled, cannot blit buffer to framebuffer!");
+	}
 	mp_buffer_info_t bufinfo;
 	mp_get_buffer_raise(args_in[1], &bufinfo, MP_BUFFER_READ);
 	uint16_t *source = (uint16_t *)bufinfo.buf;
