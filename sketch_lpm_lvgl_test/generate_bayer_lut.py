@@ -20,26 +20,6 @@ bayer8x8 = np.array([
     [42, 26, 38, 22, 41, 25, 37, 21]
 ])
 
-def bayer_dither_4gray(img):
-    """
-    输入: 8-bit 灰度图像（PIL Image），输出：抖动后的4级灰度图像
-    """
-    #img = img.convert("L")
-    arr = np.array(img)
-    h, w = arr.shape
-
-    output = np.zeros_like(arr)
-
-    for y in range(h):
-        for x in range(w):
-            pixel = arr[y, x]
-            threshold = (bayer4x4[y % 4][x % 4] + 0.5) * 16  # 范围 0~255
-            dithered = pixel + threshold - 128  # 中心化
-            level = np.clip(dithered // 64, 0, 3)
-            output[y, x] = level * 85  # 4 级灰度：0, 85, 170, 255
-
-    return Image.fromarray(output, mode='L')
-
 def ctest(i, thr):
     if i >=0 and i < 85:
         if (i > thr // 3):
