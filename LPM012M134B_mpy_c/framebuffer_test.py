@@ -3,7 +3,6 @@ from machine import Pin, PWM, Timer
 from lpm012m134b_framebuf import LPM012M134B, RGB222_COLORS, color222
 import framebuf
 import time
-import lvgl as lv
 
 lpm = LPM012M134B(Pin(0), Pin(1), Pin(2), Pin(3), Pin(4), Pin(5), Pin(6), Pin(7), Pin(8), Pin(9), Pin(10), Pin(11), Pin(12), Pin(13), Pin(14, Pin.OUT))
 
