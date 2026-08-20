@@ -1,13 +1,13 @@
 #include "stdint.h"
 #include "lpm012m134b.h"
 
-#define LCD_BL 14
+#define LCD_BL 1
 
-LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+LPM012M134B lpm(11, 10, 9, 46, 8, -1, 18, 17, 16, 15, 7, 6, 5, 4);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin();
+  Serial.begin(115200);
 
   pinMode(LCD_BL, OUTPUT);
   digitalWrite(LCD_BL, HIGH);
@@ -158,9 +158,8 @@ void flush_timeuse(int fs=0, int hi=240) {
   uint32_t ts = millis();
   lpm.flush(fs, hi);
   uint32_t tu = millis() - ts;
-  Serial.printf("flush %d to %d timeuse: %d\n", fs, hi, tu);
+  printf("flush %d to %d timeuse: %d\n", fs, hi, tu);
 }
-
 
 void loop() {
   // put your main code here, to run repeatedly:

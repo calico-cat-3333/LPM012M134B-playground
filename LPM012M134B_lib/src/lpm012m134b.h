@@ -18,7 +18,7 @@ class LPM012M134B {
 		int r1, r2, g1, g2, b1, b2;
 		static const uint32_t compressed_bayer_lut[64];
 		#if LPM012M134B_USE_FRAMEBUFFER
-		int8_t framebuffer[240][240];
+		uint8_t framebuffer[240][240];
 		#endif
 	public:
 		int width = 240;

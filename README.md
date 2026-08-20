@@ -1,6 +1,8 @@
 # LPM012M134B 试验场
 
-与 LPM012M134B 显示屏相关的测试电路和代码。目前仅在 RP2040 和 RP2350 平台 arduino-pico 上测试过。
+与 LPM012M134B 显示屏相关的测试电路和代码。目前多数代码在 RP2040 和 RP2350 平台 arduino-pico 上测试过，部分代码在 ESP32S3 上测试过。
+
+在 ESP32S3 上运行时速度很慢（刷一屏要 250 ms），不知道为什么，待进一步优化。
 
 如无特殊说明，所有代码均仅在测试电路板上测试，并必须使用 xfrp 硬件反相。
 
@@ -29,6 +31,8 @@
 [sketch_lpm_adafruitgfx_demo](sketch_lpm_adafruitgfx_demo) 另一个 AdafruitGFX 演示代码，修改自 Adafruit ST7789 驱动的演示。
 
 [LPM012M134B_mpy_c](LPM012M134B_mpy_c) 尝试编写适用于 MicroPython 的驱动程序。
+
+[sketch_lpm_esp32s3_test](sketch_lpm_esp32s3_test) 尝试在 ESP32S3 上运行。
 
 [sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 

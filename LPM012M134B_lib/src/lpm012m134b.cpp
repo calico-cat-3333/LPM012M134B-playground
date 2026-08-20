@@ -1,5 +1,6 @@
 #include "lpm012m134b.h"
 #include "Arduino.h"
+#include <cstdint>
 
 // compressed 6-bit gray to 2-bit gray bayer dither LUT
 // useage : (compressed_bayer_lut[6bitgray] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3
@@ -33,10 +34,15 @@ void LPM012M134B::init() {
 	pinMode(this->b1, OUTPUT);
 	pinMode(this->b2, OUTPUT);
 
+#ifdef ARDUINO_ARCH_ESP32
+	analogWriteFrequency(this->frp, 100);
+	analogWriteResolution(this->frp, 8);
+	analogWrite(this->frp, 127);
+#else
 	analogWriteFreq(100);
 	analogWriteRange(256);
 	analogWrite(this->frp, 127);
-
+#endif
 	digitalWrite(this->xrst, LOW);
 	digitalWrite(this->vck, LOW);
 	digitalWrite(this->vst, LOW);
@@ -142,6 +148,8 @@ void LPM012M134B::flush(int rstart, int height) {
 	// height : update area height
 	int start = max(0, rstart) * 2;
 	int end = min(240, height + rstart) * 2;
+	uint8_t cpixel, npixel;
+	uint8_t *pixelpointer = &framebuffer[start / 2][0];
 	digitalWrite(xrst, HIGH); // xrst high, enter update mode
 	delayMicroseconds(20);
 	digitalWrite(vst, HIGH);
@@ -159,8 +167,9 @@ void LPM012M134B::flush(int rstart, int height) {
 			if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
 			for (int j = 0; j < 120; j++) {
 				if (j == 20) digitalWrite(enb, LOW);
-				int8_t cpixel = framebuffer[i / 2][j * 2];
-				int8_t npixel = framebuffer[i / 2][(j * 2) + 1];
+				cpixel = *pixelpointer;
+				npixel = *(pixelpointer + 1);
+				pixelpointer = pixelpointer + 2;
 				if (i % 2 == 1) { // SPB
 					digitalWriteFast(r1, (cpixel & 0b010000));
 					digitalWriteFast(g1, (cpixel & 0b000100));
@@ -176,6 +185,7 @@ void LPM012M134B::flush(int rstart, int height) {
 					digitalWriteFast(r2, (npixel & 0b100000));
 					digitalWriteFast(g2, (npixel & 0b001000));
 					digitalWriteFast(b2, (npixel & 0b000010));
+					if (j == 119) pixelpointer = pixelpointer - 240;
 				}
 				//delayMicroseconds(1);
 				digitalToggle(hck); // hck 2~121
