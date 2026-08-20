@@ -60,13 +60,34 @@ void LPM012M134B::init() {
 }
 
 #ifndef digitalWriteFast
-	#define digitalWriteFast(pin, val) digitalWrite(pin, val ? HIGH : LOW)
+	#ifdef ARDUINO_ARCH_ESP32
+		// ref: https://esp32.com/viewtopic.php?t=27963
+		// ref: https://github.com/maarten-pennings/howto/blob/main/esp32-fast-gpio/esp32-fast-gpio.md
+		#include "soc/gpio_struct.h"
+		// #define digitalWriteFast(pin, val) GPIO.out_w1tc = 1 << pin; GPIO.out_w1ts = (!!val) << pin;
+		static inline __attribute__((always_inline))
+		void digitalWriteFast(int pin, bool val) {
+			if (pin < 32) {
+				GPIO.out_w1tc = 1 << pin;
+				GPIO.out_w1ts = val << pin;
+			}
+			else {
+				GPIO.out1_w1tc.val = 1 << (pin - 32);
+				GPIO.out1_w1ts.val = val << (pin - 32);
+			}
+		}
+	#else
+		// slow fallback
+		#define digitalWriteFast(pin, val) digitalWrite(pin, val ? HIGH : LOW)
+	#endif
 	#define _DWF_CUSTOM 1
 #endif
 
 #ifndef digitalToggle
 	#ifdef ARDUINO_ARCH_RP2040
 		#define digitalToggle(pin) gpio_put(pin, !gpio_get(pin))
+	#elif ARDUINO_ARCH_ESP32
+		#define digitalToggle(pin) digitalWriteFast(pin, !digitalRead(pin))
 	#else
 		#define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 	#endif
@@ -83,23 +104,23 @@ void LPM012M134B::flush_buffer_rgb565(int y1, int y2, uint16_t * buf) {
 	int i, j;
 	int start = max(0, y1) * 2;
 	int end = min(240, y2 + 1) * 2;
-	digitalWrite(xrst, HIGH); // xrst high, enter update mode
+	digitalWriteFast(xrst, HIGH); // xrst high, enter update mode
 	delayMicroseconds(20);
-	digitalWrite(vst, HIGH);
+	digitalWriteFast(vst, HIGH);
 	delayMicroseconds(40);
 	digitalToggle(vck); // vck 1
 	delayMicroseconds(40);
-	digitalWrite(vst, LOW);
+	digitalWriteFast(vst, LOW);
 	digitalToggle(vck); // vck 2
 	//delayMicroseconds(1);
 	for (i = 0; i < 486; i++) {
 		if (i >= start && i < end) {
-			digitalWrite(hst, HIGH);
+			digitalWriteFast(hst, HIGH);
 			digitalToggle(hck); // hck 1
-			digitalWrite(hst, LOW);
-			if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
+			digitalWriteFast(hst, LOW);
+			if (i != start) digitalWriteFast(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
 			for (j = 0; j < 120; j++) {
-				if (j == 20) digitalWrite(enb, LOW);
+				if (j == 20) digitalWriteFast(enb, LOW);
 				//pixelpointer = buf + (240 * ((i - start) / 2)) + j * 2;
 				cpixel = *pixelpointer;
 				npixel = *(pixelpointer + 1);
@@ -130,11 +151,11 @@ void LPM012M134B::flush_buffer_rgb565(int y1, int y2, uint16_t * buf) {
 		}
 		else {
 			if (i == end) {
-				digitalWrite(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
+				digitalWriteFast(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
 				delayMicroseconds(40);
-				digitalWrite(enb, LOW);
+				digitalWriteFast(enb, LOW);
 			}
-			if (i == 484) digitalWrite(xrst, LOW); // xrst low, exit update mode
+			if (i == 484) digitalWriteFast(xrst, LOW); // xrst low, exit update mode
 			delayMicroseconds(1);
 			digitalToggle(vck); // vck 3~488 中的无数据部分
 		}
@@ -150,23 +171,23 @@ void LPM012M134B::flush(int rstart, int height) {
 	int end = min(240, height + rstart) * 2;
 	uint8_t cpixel, npixel;
 	uint8_t *pixelpointer = &framebuffer[start / 2][0];
-	digitalWrite(xrst, HIGH); // xrst high, enter update mode
+	digitalWriteFast(xrst, HIGH); // xrst high, enter update mode
 	delayMicroseconds(20);
-	digitalWrite(vst, HIGH);
+	digitalWriteFast(vst, HIGH);
 	delayMicroseconds(40);
 	digitalToggle(vck); // vck 1
 	delayMicroseconds(40);
-	digitalWrite(vst, LOW);
+	digitalWriteFast(vst, LOW);
 	digitalToggle(vck); // vck 2
 	//delayMicroseconds(1);
 	for (int i = 0; i < 486; i++) {
 		if (i >= start && i < end) {
-			digitalWrite(hst, HIGH);
+			digitalWriteFast(hst, HIGH);
 			digitalToggle(hck); // hck 1
-			digitalWrite(hst, LOW);
-			if (i != start) digitalWrite(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
+			digitalWriteFast(hst, LOW);
+			if (i != start) digitalWriteFast(enb, HIGH); // 第一个 enb 高电平实际发生在 LPB1 后
 			for (int j = 0; j < 120; j++) {
-				if (j == 20) digitalWrite(enb, LOW);
+				if (j == 20) digitalWriteFast(enb, LOW);
 				cpixel = *pixelpointer;
 				npixel = *(pixelpointer + 1);
 				pixelpointer = pixelpointer + 2;
@@ -196,11 +217,11 @@ void LPM012M134B::flush(int rstart, int height) {
 		}
 		else {
 			if (i == end) {
-				digitalWrite(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
+				digitalWriteFast(enb, HIGH); // 最后一个 enb 高电平发生在 SPB240 后
 				delayMicroseconds(40);
-				digitalWrite(enb, LOW);
+				digitalWriteFast(enb, LOW);
 			}
-			if (i == 484) digitalWrite(xrst, LOW); // xrst low, exit update mode
+			if (i == 484) digitalWriteFast(xrst, LOW); // xrst low, exit update mode
 			delayMicroseconds(1);
 			digitalToggle(vck); // vck 3~488 中的无数据部分
 		}
