@@ -125,7 +125,7 @@ void LPM012M134B::flush_buffer_rgb565(int y1, int y2, uint16_t * buf) {
 				cpixel = *pixelpointer;
 				npixel = *(pixelpointer + 1);
 				pixelpointer = pixelpointer + 2;
-				if (i % 2 == 1) { // SPB
+				if (i & 1) { // SPB
 					digitalWriteFast(r1, (cpixel & 0x4000)); // (1 << 14)
 					digitalWriteFast(g1, (cpixel & 0x0200)); // (1 << 9)
 					digitalWriteFast(b1, (cpixel & 0x0008)); // (1 << 3)
@@ -191,7 +191,7 @@ void LPM012M134B::flush(int rstart, int height) {
 				cpixel = *pixelpointer;
 				npixel = *(pixelpointer + 1);
 				pixelpointer = pixelpointer + 2;
-				if (i % 2 == 1) { // SPB
+				if (i & 1) { // SPB
 					digitalWriteFast(r1, (cpixel & 0b010000));
 					digitalWriteFast(g1, (cpixel & 0b000100));
 					digitalWriteFast(b1, (cpixel & 0b000001));

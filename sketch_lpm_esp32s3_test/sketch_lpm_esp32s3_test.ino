@@ -154,6 +154,36 @@ void drawEllipseRGB565TestStep() {
   hi = 240;
 }
 
+// no use
+// #ifdef ARDUINO_ARCH_ESP32
+// 	uint32_t _bit_mask0s = 0, _bit_mask0c = 0, _bit_mask1s = 0, _bit_mask1c = 0;
+// 	static inline __attribute__((always_inline))
+// 	void writePixelData(int pin, bool val) {
+// 		if (pin < 32) {
+// 			_bit_mask0c = _bit_mask0c | (1 << pin);
+// 			_bit_mask0s = _bit_mask0s | (val << pin);
+// 		}
+// 		else {
+// 			_bit_mask1c = _bit_mask1c | (1 << (pin - 32));
+// 			_bit_mask1s = _bit_mask1s | (val << (pin - 32));
+// 		}
+// 	}
+// 	static inline __attribute__((always_inline))
+// 	void writePixelDataEnd() {
+// 		GPIO.out_w1tc = _bit_mask0c;
+// 		GPIO.out_w1ts = _bit_mask0s;
+// 		GPIO.out1_w1tc.val = _bit_mask1c;
+// 		GPIO.out1_w1ts.val = _bit_mask1s;
+// 		_bit_mask0s = 0;
+// 		_bit_mask0c = 0;
+// 		_bit_mask1s = 0;
+// 		_bit_mask1c = 0;
+// 	}
+// #else
+// 	#define writePixelData digitalWriteFast
+// 	#define writePixelDataEnd
+// #endif
+
 void flush_timeuse(int fs=0, int hi=240) {
   uint32_t ts = millis();
   lpm.flush(fs, hi);
@@ -207,7 +237,8 @@ void loop() {
   if (cr == 13) {
   	fillRGB565TestStep();
   }
-  flush_timeuse(fs, hi);
+  // flush_timeuse(fs, hi);
+  flush_timeuse();
   delay(50);
   color ++;
   if (color == 64) {
