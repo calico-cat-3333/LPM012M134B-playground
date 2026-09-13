@@ -1,9 +1,11 @@
 #include "stdint.h"
+
 #include "lpm012m134b.h"
 
-#define LCD_BL 1
 
-LPM012M134B lpm(11, 10, 9, 46, 8, -1, 18, 17, 16, 15, 7, 6, 5, 4);
+#define LCD_BL 46
+
+LPM012M134B lpm(14, 13, 12, 11, 10, -1, 18, 17, 16, 15, 7, 6, 5, 4);
 
 void setup() {
   // put your setup code here, to run once:
