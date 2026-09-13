@@ -76,20 +76,21 @@ void LPM012M134B::init() {
 				GPIO.out1_w1ts.val = val << (pin - 32);
 			}
 		}
-		static inline __attribute__((always_inline))
-		bool digitalReadFast(int pin) {
-			if (pin < 32) {
-				return (GPIO.in & (1 << pin));
+		#ifndef digitalReadFast
+			static inline __attribute__((always_inline))
+			bool digitalReadFast(int pin) {
+				if (pin < 32) {
+					return (GPIO.in & (1 << pin));
+				}
+				else {
+					return (GPIO.in1.val & (1 << (pin - 32)));
+				}
 			}
-			else {
-				return (GPIO.in1.val & (1 << (pin - 32)));
-			}
-		}
+		#endif
 	#else
 		// slow fallback
 		#define digitalWriteFast(pin, val) digitalWrite(pin, val ? HIGH : LOW)
 	#endif
-	#define _DWF_CUSTOM 1
 #endif
 
 #ifndef digitalToggle
@@ -100,7 +101,6 @@ void LPM012M134B::init() {
 	#else
 		#define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 	#endif
-	#define _DT_CUSTOM 1
 #endif
 
 void LPM012M134B::flush_buffer_rgb565(int y1, int y2, uint16_t * buf) {
@@ -384,14 +384,6 @@ void LPM012M134B::fillRGB565(uint16_t rgb565) {
 }
 
 #endif //LPM012134B_USE_FRAMEBUFFER
-
-#if _DWF_CUSTOM
-	#undef digitalWriteFast
-#endif
-
-#if _DT_CUSTOM
-	#undef digitalToggle
-#endif
 
 uint16_t LPM012M134B::bayer_dither_point(int x, int y, uint16_t rgb565) {
 	uint8_t r2 = (compressed_bayer_lut[((rgb565 >> 11) & 0x1F) << 1] >> (((x & 3) | ((y << 2) & 12)) << 1)) & 3;
