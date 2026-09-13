@@ -76,6 +76,15 @@ void LPM012M134B::init() {
 				GPIO.out1_w1ts.val = val << (pin - 32);
 			}
 		}
+		static inline __attribute__((always_inline))
+		bool digitalReadFast(int pin) {
+			if (pin < 32) {
+				return (GPIO.in & (1 << pin));
+			}
+			else {
+				return (GPIO.in1.val & (1 << (pin - 32)));
+			}
+		}
 	#else
 		// slow fallback
 		#define digitalWriteFast(pin, val) digitalWrite(pin, val ? HIGH : LOW)
@@ -87,7 +96,7 @@ void LPM012M134B::init() {
 	#ifdef ARDUINO_ARCH_RP2040
 		#define digitalToggle(pin) gpio_put(pin, !gpio_get(pin))
 	#elif ARDUINO_ARCH_ESP32
-		#define digitalToggle(pin) digitalWriteFast(pin, !digitalRead(pin))
+		#define digitalToggle(pin) digitalWriteFast(pin, !digitalReadFast(pin))
 	#else
 		#define digitalToggle(pin) digitalWrite(pin, !digitalRead(pin))
 	#endif
