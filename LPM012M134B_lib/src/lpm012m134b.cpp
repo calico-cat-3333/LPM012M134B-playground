@@ -68,22 +68,22 @@ void LPM012M134B::init() {
 		static inline __attribute__((always_inline))
 		void digitalWriteFast(int pin, bool val) {
 			if (pin < 32) {
-				GPIO.out_w1tc = 1 << pin;
-				GPIO.out_w1ts = val << pin;
+				if (val) GPIO.out_w1ts = 1u << pin;
+				else GPIO.out_w1tc = 1u << pin;
 			}
 			else {
-				GPIO.out1_w1tc.val = 1 << (pin - 32);
-				GPIO.out1_w1ts.val = val << (pin - 32);
+				if (val) GPIO.out1_w1ts.val = 1u << (pin - 32);
+				else GPIO.out1_w1tc.val = 1u << (pin - 32);
 			}
 		}
 		#ifndef digitalReadFast
 			static inline __attribute__((always_inline))
 			bool digitalReadFast(int pin) {
 				if (pin < 32) {
-					return (GPIO.in & (1 << pin));
+					return (GPIO.in & (1u << pin));
 				}
 				else {
-					return (GPIO.in1.val & (1 << (pin - 32)));
+					return (GPIO.in1.val & (1u << (pin - 32)));
 				}
 			}
 		#endif
