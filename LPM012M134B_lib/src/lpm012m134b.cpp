@@ -36,8 +36,8 @@ void LPM012M134B::init() {
 
 #ifdef ARDUINO_ARCH_ESP32
 	analogWriteFrequency(this->frp, 60);
-	analogWriteResolution(this->frp, 8);
-	analogWrite(this->frp, 127);
+	analogWriteResolution(this->frp, 16);
+	analogWrite(this->frp, 32767);
 #else
 	analogWriteFreq(60);
 	analogWriteRange(256);
