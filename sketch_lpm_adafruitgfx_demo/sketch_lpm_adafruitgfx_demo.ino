@@ -4,9 +4,15 @@
 #include "adafruitgfx_lpm012m134b.h"
 #include <Fonts/FreeSansBold18pt7b.h> // A custom font
 
+#ifdef ARDUINO_ARCH_RP2040
 #define LCD_BL 14
 
 Adafruit_GFX_LPM012M134B display = Adafruit_GFX_LPM012M134B(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+#elif ARDUINO_ARCH_ESP32
+#define LCD_BL 46
+
+Adafruit_GFX_LPM012M134B display = Adafruit_GFX_LPM012M134B(14, 13, 12, 11, 10, -1, 18, 17, 16, 15, 7, 6, 5, 4);
+#endif
 
 #define PAUSE 1000  // Delay (milliseconds) between examples
 uint8_t rotate = 0; // Current screen orientation (0-3)
@@ -14,7 +20,11 @@ uint8_t rotate = 0; // Current screen orientation (0-3)
 
 
 void setup() {
+  #ifdef ARDUINO_ARCH_ESP32
+  Serial.begin(115200);
+  #else
   Serial.begin();
+  #endif
   Serial.println("LPM012M134B Test!"); 
 
   pinMode(LCD_BL, OUTPUT);
