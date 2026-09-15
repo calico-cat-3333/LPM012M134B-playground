@@ -4,11 +4,22 @@ extern "C" {
   #include "ugui.h"
 }
 
+#ifdef ARDUINO_ARCH_RP2040
 LPM012M134B lpm(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13);
+int bl = 14;
+int key = 20;
+#define KEY_INPUT_TYPE INPUT
+#elif ARDUINO_ARCH_ESP32
+LPM012M134B lpm(14, 13, 12, 11, 10, -1, 18, 17, 16, 15, 7, 6, 5, 4);
+int bl = 46;
+int key = 21;
+#define KEY_INPUT_TYPE INPUT_PULLUP
+#endif
+
 UG_GUI gui;
 
-int ymin = 240;
-int ymax = 0;
+UG_S16 ymin = 240;
+UG_S16 ymax = 0;
 
 void pset(UG_S16 x, UG_S16 y, UG_COLOR c) {
   uint8_t rgb222c = ((c & 0xc00000) >> 18) | ((c & 0x00c000) >> 12) | ((c & 0x0000c0) >> 6);
@@ -17,17 +28,18 @@ void pset(UG_S16 x, UG_S16 y, UG_COLOR c) {
   ymax = max(ymax, y);
 }
 
-int bl = 14;
-int key = 20;
-
 void setup() {
   // put your setup code here, to run once:
+  #ifdef ARDUINO_ARCH_ESP32
+  Serial.begin(115200);
+  #else
   Serial.begin();
+  #endif
 
   pinMode(bl, OUTPUT);
   digitalWrite(bl, HIGH);
 
-  pinMode(key, INPUT);
+  pinMode(key, KEY_INPUT_TYPE);
 
   randomSeed(micros());
   lpm.init();
@@ -166,8 +178,13 @@ int lpy = 0;
 
 void joystick()  {
   int ax, ay;
+  #ifdef ARDUINO_ARCH_RP2040
   ax = analogRead(A1);
   ay = analogRead(A0);
+  #elif ARDUINO_ARCH_ESP32
+  ax = analogRead(9);
+  ay = 2048;
+  #endif
   Serial.print(ax);
   Serial.print(", ");
   Serial.println(ay);
