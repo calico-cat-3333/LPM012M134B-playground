@@ -35,11 +35,11 @@ void LPM012M134B::init() {
 	pinMode(this->b2, OUTPUT);
 
 #ifdef ARDUINO_ARCH_ESP32
-	analogWriteFrequency(this->frp, 100);
+	analogWriteFrequency(this->frp, 60);
 	analogWriteResolution(this->frp, 8);
 	analogWrite(this->frp, 127);
 #else
-	analogWriteFreq(100);
+	analogWriteFreq(60);
 	analogWriteRange(256);
 	analogWrite(this->frp, 127);
 #endif
