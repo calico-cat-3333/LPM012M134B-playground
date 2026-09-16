@@ -32,6 +32,8 @@
 
 [sketch_lpm_esp32s3_test](sketch_lpm_esp32s3_test) 尝试在 ESP32S3 上运行。
 
+[sketch_lpm_esp32s3_lvgl_test](sketch_lpm_esp32s3_lvgl_test) ESP32S3 + LVGL 测试代码
+
 [sketch_test_LPM012M134B](sketch_test_LPM012M134B) 最早的测试代码，使用的还是面包板+杜邦线连接电路，仅作记录，不能在测试电路板上运行使用。
 
 ## 基本信息
