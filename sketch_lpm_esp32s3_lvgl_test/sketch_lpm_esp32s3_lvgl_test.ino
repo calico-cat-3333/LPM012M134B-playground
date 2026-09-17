@@ -69,6 +69,40 @@ void rounder_event_cb(lv_event_t * e)
 
 lv_display_t * disp;
 
+lv_group_t * g;
+lv_indev_t * indev;
+
+void btn_as_enc_read(lv_indev_t * indev, lv_indev_data_t * data){
+  bool key_menu = digitalRead(KEY_MENU);
+  bool key_back = digitalRead(KEY_BACK);
+  uint16_t key_stat = analogRead(ADC_KEYS);
+  if (key_stat > 4000 && key_back == true) {
+    data->state = LV_INDEV_STATE_RELEASED;
+  }
+  else if (key_back == false) {
+    printf("BACK\n");
+    data->key = LV_KEY_ESC;
+    data->state = LV_INDEV_STATE_PRESSED;
+  }
+  else if (key_stat <= 100) {
+    printf("LEFT\n");
+    if (key_menu == true) data->key = LV_KEY_LEFT;
+    else data->key = LV_KEY_UP;
+    data->state = LV_INDEV_STATE_PRESSED;
+  }
+  else if (key_stat >= 400 && key_stat <= 900) {
+    printf("ENTER\n");
+    data->key = LV_KEY_ENTER;
+    data->state = LV_INDEV_STATE_PRESSED;
+  }
+  else if (key_stat >= 1100 && key_stat <= 1500) {
+    printf("RIGHT\n");
+    if (key_menu == true) data->key = LV_KEY_RIGHT;
+    else data->key = LV_KEY_DOWN;
+    data->state = LV_INDEV_STATE_PRESSED;
+  }
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -81,7 +115,7 @@ void setup() {
   pinMode(KEY_BACK, INPUT_PULLUP);
   pinMode(KEY_MENU, INPUT_PULLUP);
 
-  String LVGL_Arduino = "Hello Arduino! ";
+  String LVGL_Arduino = "Hello Arduino!  LVGL:";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.println(LVGL_Arduino);
 
@@ -96,31 +130,39 @@ void setup() {
   lv_display_set_buffers(disp, draw_buf1, draw_buf2, sizeof(draw_buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_add_event_cb(disp, rounder_event_cb, LV_EVENT_INVALIDATE_AREA, NULL);
 
-  //lv_demo_widgets();
-  //lv_example_scale_6();
-  lv_demo_benchmark();
+  g = lv_group_create();
+  indev = lv_indev_create();
+  lv_indev_set_type(indev, LV_INDEV_TYPE_ENCODER);
+  lv_indev_set_mode(indev, LV_INDEV_MODE_TIMER);
+  lv_indev_set_read_cb(indev, btn_as_enc_read);
+  lv_group_set_default(g);
+  lv_indev_set_group(indev, g);
 
-  Serial.println("Core0: Setup done");
+  lv_demo_widgets();
+  //lv_example_keyboard_1();
+  //lv_demo_benchmark();
+
+  Serial.println("Setup done");
 }
 
-bool key_menu_lt = true;
-bool key_back_lt = true;
+// bool key_menu_lt = true;
+// bool key_back_lt = true;
 
 void loop() {
   // put your main code here, to run repeatedly:
-  bool key_menu_curr, key_back_curr;
-  key_menu_curr = digitalRead(KEY_MENU);
-  key_back_curr = digitalRead(KEY_BACK);
+  // bool key_menu_curr, key_back_curr;
+  // key_menu_curr = digitalRead(KEY_MENU);
+  // key_back_curr = digitalRead(KEY_BACK);
 
-  if (!key_back_curr && key_back_lt) {
-    digitalToggle(LCD_BL);
-  }
-  if(!key_menu_curr && key_menu_lt) {
-    use_bayer = !use_bayer;
-    lv_obj_invalidate(lv_screen_active());
-  }
-  key_menu_lt = key_menu_curr;
-  key_back_lt = key_back_curr;
+  // if (!key_back_curr && key_back_lt) {
+  //   digitalToggle(LCD_BL);
+  // }
+  // if(!key_menu_curr && key_menu_lt) {
+  //   use_bayer = !use_bayer;
+  //   lv_obj_invalidate(lv_screen_active());
+  // }
+  // key_menu_lt = key_menu_curr;
+  // key_back_lt = key_back_curr;
   lv_timer_handler(); /* let the GUI do its work */
   delay(5); /* let this time pass */
 }
