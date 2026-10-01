@@ -28,9 +28,10 @@ class LPM012M134B_lv:
         self.b2 = b2
         
 
-        self.frp = PWM(self.frp_pin)
-        self.frp.freq(100)
-        self.frp.duty_u16(32767)
+        if self.frp_pin is not None:
+            self.frp = PWM(self.frp_pin)
+            self.frp.freq(100)
+            self.frp.duty_u16(32767)
 
         if bl is not None:
             self.backlight = PWM(bl)

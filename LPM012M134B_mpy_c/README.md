@@ -4,9 +4,11 @@
 
 仍需进一步完善和测试。
 
-在 RP2040、RP2350 和 ESP32S3 上测试过，性能不是很好。
+在 RP2040、RP2350 和 ESP32S3 上测试过。
 
 目前需要单独为 frp 引脚启用 PWM.
+
+为 frp 引脚启用 PWM 最好在 boot.py 中进行，然后初始化 LPM012M134B 屏幕时，frp 和 xfrp 参数填写 None。
 
 ## 编译 MicroPython
 
@@ -18,7 +20,7 @@
 
 ### lv_micropython
 
-lv_micropython 本身需要使用该参数添加 lvgl 模块，所以则需要准备一个 bind.cmake 文件将 lvgl 和屏幕驱动都添加进去，文件内容为：
+RP2 平台的 lv_micropython 本身需要使用该参数添加 lvgl 模块，所以则需要准备一个 bind.cmake 文件将 lvgl 和屏幕驱动都添加进去，文件内容为：
 
 ```
 include(${CMAKE_CURRENT_LIST_DIR}/lv_micropython/user_modules/lv_binding_micropython/bindings.cmake)
@@ -26,6 +28,8 @@ include(${CMAKE_CURRENT_LIST_DIR}/LPM012M134B_playground/LPM012M134B_mpy_c/micro
 ```
 
 然后按照目标端口的需要进行，编译时添加参数 `USER_C_MODULES=../../../bind.cmake`
+
+ESP32S3 平台的 lv_micropython 会在内部自动附加 lvgl 的 bingdings.cmake 因此 ESP32 平台上，不需要准备 bind.cmake，直接使用 `USER_C_MODULES=/path/to/LPM012M134B_playground/LPM012M134B_mpy_c/micropython.cmake` 即可，注意最好使用绝对路径。
 
 ## 使用
 

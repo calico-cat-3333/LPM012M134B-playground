@@ -88,7 +88,36 @@ static mp_obj_t lpm012m134b_LPM012M134B_init(mp_obj_t self_in) {
 }
 static MP_DEFINE_CONST_FUN_OBJ_1(lpm012m134b_LPM012M134B_init_obj, lpm012m134b_LPM012M134B_init);
 
-#define MP_PIN_TOGGLE(pin) mp_hal_pin_write((pin), !(mp_hal_pin_read(pin)))
+#if CONFIG_IDF_TARGET_ESP32S3
+	// ref: https://esp32.com/viewtopic.php?t=27963
+	// ref: https://github.com/maarten-pennings/howto/blob/main/esp32-fast-gpio/esp32-fast-gpio.md
+	#include "soc/gpio_struct.h"
+	static inline __attribute__((always_inline))
+	void _PIN_WRITE_FAST(int pin, bool val) {
+		if (pin < 32) {
+			if (val) GPIO.out_w1ts = 1u << pin;
+			else GPIO.out_w1tc = 1u << pin;
+		}
+		else {
+			if (val) GPIO.out1_w1ts.val = 1u << (pin - 32);
+			else GPIO.out1_w1tc.val = 1u << (pin - 32);
+		}
+	}
+	static inline __attribute__((always_inline))
+	bool _PIN_READ_FAST(int pin) {
+		if (pin < 32) {
+			return (GPIO.in & (1u << pin));
+		}
+		else {
+			return (GPIO.in1.val & (1u << (pin - 32)));
+		}
+	}
+#else
+	#define _PIN_WRITE_FAST mp_hal_pin_write
+	#define _PIN_READ_FAST mp_hal_pin_read
+#endif
+
+#define _PIN_TOGGLE(pin) _PIN_WRITE_FAST((pin), !(_PIN_READ_FAST(pin)))
 static mp_obj_t lpm012m134b_LPM012M134B_flush(size_t n_args, const mp_obj_t *args_in) {
 	// support partial (line) update
 	// start : start line index
@@ -109,57 +138,61 @@ static mp_obj_t lpm012m134b_LPM012M134B_flush(size_t n_args, const mp_obj_t *arg
 	}
 	int start = MAX(0, rstart) * 2;
 	int end = MIN(240, height + rstart) * 2;
-	mp_hal_pin_write(self->xrst, 1); // xrst high, enter update mode
+	uint8_t cpixel, npixel;
+	uint8_t *pixelpointer = &(self->framebuffer[(start / 2) * self->width]);
+	_PIN_WRITE_FAST(self->xrst, 1); // xrst high, enter update mode
 	mp_hal_delay_us_fast(20);
-	mp_hal_pin_write(self->vst, 1);
+	_PIN_WRITE_FAST(self->vst, 1);
 	mp_hal_delay_us_fast(40);
-	MP_PIN_TOGGLE(self->vck); // vck 1
+	_PIN_TOGGLE(self->vck); // vck 1
 	mp_hal_delay_us_fast(40);
-	mp_hal_pin_write(self->vst, 0);
-	MP_PIN_TOGGLE(self->vck); // vck 2
+	_PIN_WRITE_FAST(self->vst, 0);
+	_PIN_TOGGLE(self->vck); // vck 2
 	//mp_hal_delay_us_fast(1);
 	for (int i = 0; i < 486; i++) {
 		if (i >= start && i < end) {
-			mp_hal_pin_write(self->hst, 1);
-			MP_PIN_TOGGLE(self->hck); // hck 1
-			mp_hal_pin_write(self->hst, 0);
-			if (i != start) mp_hal_pin_write(self->enb, 1); // 第一个 enb 高电平实际发生在 LPB1 后
+			_PIN_WRITE_FAST(self->hst, 1);
+			_PIN_TOGGLE(self->hck); // hck 1
+			_PIN_WRITE_FAST(self->hst, 0);
+			if (i != start) _PIN_WRITE_FAST(self->enb, 1); // 第一个 enb 高电平实际发生在 LPB1 后
 			for (int j = 0; j < 120; j++) {
-				if (j == 20) mp_hal_pin_write(self->enb, 0);
-				uint8_t cpixel = self->framebuffer[((i / 2) * self->width) + (j * 2)];
-				uint8_t npixel = self->framebuffer[((i / 2) * self->width) + (j * 2) + 1];
-				if (i % 2 == 1) { // SPB
-					mp_hal_pin_write(self->r1, !!(cpixel & 0b010000));
-					mp_hal_pin_write(self->g1, !!(cpixel & 0b000100));
-					mp_hal_pin_write(self->b1, !!(cpixel & 0b000001));
-					mp_hal_pin_write(self->r2, !!(npixel & 0b010000));
-					mp_hal_pin_write(self->g2, !!(npixel & 0b000100));
-					mp_hal_pin_write(self->b2, !!(npixel & 0b000001));
+				if (j == 20) _PIN_WRITE_FAST(self->enb, 0);
+				cpixel = *pixelpointer;
+				npixel = *(pixelpointer + 1);
+				pixelpointer = pixelpointer + 2;
+				if (i & 1) { // SPB
+					_PIN_WRITE_FAST(self->r1, !!(cpixel & 0b010000));
+					_PIN_WRITE_FAST(self->g1, !!(cpixel & 0b000100));
+					_PIN_WRITE_FAST(self->b1, !!(cpixel & 0b000001));
+					_PIN_WRITE_FAST(self->r2, !!(npixel & 0b010000));
+					_PIN_WRITE_FAST(self->g2, !!(npixel & 0b000100));
+					_PIN_WRITE_FAST(self->b2, !!(npixel & 0b000001));
 				}
 				else { // LPB
-					mp_hal_pin_write(self->r1, !!(cpixel & 0b100000));
-					mp_hal_pin_write(self->g1, !!(cpixel & 0b001000));
-					mp_hal_pin_write(self->b1, !!(cpixel & 0b000010));
-					mp_hal_pin_write(self->r2, !!(npixel & 0b100000));
-					mp_hal_pin_write(self->g2, !!(npixel & 0b001000));
-					mp_hal_pin_write(self->b2, !!(npixel & 0b000010));
+					_PIN_WRITE_FAST(self->r1, !!(cpixel & 0b100000));
+					_PIN_WRITE_FAST(self->g1, !!(cpixel & 0b001000));
+					_PIN_WRITE_FAST(self->b1, !!(cpixel & 0b000010));
+					_PIN_WRITE_FAST(self->r2, !!(npixel & 0b100000));
+					_PIN_WRITE_FAST(self->g2, !!(npixel & 0b001000));
+					_PIN_WRITE_FAST(self->b2, !!(npixel & 0b000010));
+					if (j == 119) pixelpointer = pixelpointer - 240; // LPB done, then SPB
 				}
 				//mp_hal_delay_us_fast(1);
-				MP_PIN_TOGGLE(self->hck); // hck 2~121
+				_PIN_TOGGLE(self->hck); // hck 2~121
 			}
 			//mp_hal_delay_us_fast(1);
-			MP_PIN_TOGGLE(self->vck); // vck 3~482 中的有效数据刷新部分
-			MP_PIN_TOGGLE(self->hck); // hck 122
+			_PIN_TOGGLE(self->vck); // vck 3~482 中的有效数据刷新部分
+			_PIN_TOGGLE(self->hck); // hck 122
 		}
 		else {
 			if (i == end) {
-				mp_hal_pin_write(self->enb, 1); // 最后一个 enb 高电平发生在 SPB240 后
+				_PIN_WRITE_FAST(self->enb, 1); // 最后一个 enb 高电平发生在 SPB240 后
 				mp_hal_delay_us_fast(40);
-				mp_hal_pin_write(self->enb, 0);
+				_PIN_WRITE_FAST(self->enb, 0);
 			}
-			if (i == 484) mp_hal_pin_write(self->xrst, 0); // xrst low, exit update mode
+			if (i == 484) _PIN_WRITE_FAST(self->xrst, 0); // xrst low, exit update mode
 			mp_hal_delay_us_fast(1);
-			MP_PIN_TOGGLE(self->vck); // vck 3~488 中的无数据部分
+			_PIN_TOGGLE(self->vck); // vck 3~488 中的无数据部分
 		}
 	}
 	return mp_const_none;
@@ -178,68 +211,70 @@ static mp_obj_t lpm012m134b_LPM012M134B_flush_buffer_rgb565(size_t n_args, const
 	mp_buffer_info_t bufinfo;
 	mp_get_buffer_raise(args_in[3], &bufinfo, MP_BUFFER_READ);
 	uint16_t *pixelpointer = (uint16_t *)bufinfo.buf;
-	int cnt = 0;
 
 	int start = MAX(0, y1) * 2;
 	int end = MIN(240, y2 + 1) * 2;
-	mp_hal_pin_write(self->xrst, 1); // xrst high, enter update mode
+	_PIN_WRITE_FAST(self->xrst, 1); // xrst high, enter update mode
 	mp_hal_delay_us_fast(20);
-	mp_hal_pin_write(self->vst, 1);
+	_PIN_WRITE_FAST(self->vst, 1);
 	mp_hal_delay_us_fast(40);
-	MP_PIN_TOGGLE(self->vck); // vck 1
+	_PIN_TOGGLE(self->vck); // vck 1
 	mp_hal_delay_us_fast(40);
-	mp_hal_pin_write(self->vst, 0);
-	MP_PIN_TOGGLE(self->vck); // vck 2
+	_PIN_WRITE_FAST(self->vst, 0);
+	_PIN_TOGGLE(self->vck); // vck 2
 	//mp_hal_delay_us_fast(1);
 	for (int i = 0; i < 486; i++) {
 		if (i >= start && i < end) {
-			mp_hal_pin_write(self->hst, 1);
-			MP_PIN_TOGGLE(self->hck); // hck 1
-			mp_hal_pin_write(self->hst, 0);
-			if (i != start) mp_hal_pin_write(self->enb, 1); // 第一个 enb 高电平实际发生在 LPB1 后
+			_PIN_WRITE_FAST(self->hst, 1);
+			_PIN_TOGGLE(self->hck); // hck 1
+			_PIN_WRITE_FAST(self->hst, 0);
+			if (i != start) _PIN_WRITE_FAST(self->enb, 1); // 第一个 enb 高电平实际发生在 LPB1 后
 			for (int j = 0; j < 120; j++) {
-				if (j == 20) mp_hal_pin_write(self->enb, 0);
-				uint16_t cpixel = pixelpointer[cnt];
-				uint16_t npixel = pixelpointer[cnt + 1];
-				cnt = cnt + 2;
-				if (i % 2 == 1) { // SPB
-					mp_hal_pin_write(self->r1, !!(cpixel & 0x4000));
-					mp_hal_pin_write(self->g1, !!(cpixel & 0x0200));
-					mp_hal_pin_write(self->b1, !!(cpixel & 0x0008));
-					mp_hal_pin_write(self->r2, !!(npixel & 0x4000));
-					mp_hal_pin_write(self->g2, !!(npixel & 0x0200));
-					mp_hal_pin_write(self->b2, !!(npixel & 0x0008));
+				if (j == 20) _PIN_WRITE_FAST(self->enb, 0);
+				uint16_t cpixel = *pixelpointer;
+				uint16_t npixel = *(pixelpointer + 1);
+				pixelpointer = pixelpointer + 2;
+				if (i & 1) { // SPB
+					_PIN_WRITE_FAST(self->r1, !!(cpixel & 0x4000));
+					_PIN_WRITE_FAST(self->g1, !!(cpixel & 0x0200));
+					_PIN_WRITE_FAST(self->b1, !!(cpixel & 0x0008));
+					_PIN_WRITE_FAST(self->r2, !!(npixel & 0x4000));
+					_PIN_WRITE_FAST(self->g2, !!(npixel & 0x0200));
+					_PIN_WRITE_FAST(self->b2, !!(npixel & 0x0008));
 				}
 				else { // LPB
-					mp_hal_pin_write(self->r1, !!(cpixel & 0x8000));
-					mp_hal_pin_write(self->g1, !!(cpixel & 0x0400));
-					mp_hal_pin_write(self->b1, !!(cpixel & 0x0010));
-					mp_hal_pin_write(self->r2, !!(npixel & 0x8000));
-					mp_hal_pin_write(self->g2, !!(npixel & 0x0400));
-					mp_hal_pin_write(self->b2, !!(npixel & 0x0010));
-					if (j == 119) cnt = cnt - 240;
+					_PIN_WRITE_FAST(self->r1, !!(cpixel & 0x8000));
+					_PIN_WRITE_FAST(self->g1, !!(cpixel & 0x0400));
+					_PIN_WRITE_FAST(self->b1, !!(cpixel & 0x0010));
+					_PIN_WRITE_FAST(self->r2, !!(npixel & 0x8000));
+					_PIN_WRITE_FAST(self->g2, !!(npixel & 0x0400));
+					_PIN_WRITE_FAST(self->b2, !!(npixel & 0x0010));
+					if (j == 119) pixelpointer = pixelpointer - 240; // LPB done, then SPB
 				}
 				//mp_hal_delay_us_fast(1);
-				MP_PIN_TOGGLE(self->hck); // hck 2~121
+				_PIN_TOGGLE(self->hck); // hck 2~121
 			}
 			//mp_hal_delay_us_fast(1);
-			MP_PIN_TOGGLE(self->vck); // vck 3~482 中的有效数据刷新部分
-			MP_PIN_TOGGLE(self->hck); // hck 122
+			_PIN_TOGGLE(self->vck); // vck 3~482 中的有效数据刷新部分
+			_PIN_TOGGLE(self->hck); // hck 122
 		}
 		else {
 			if (i == end) {
-				mp_hal_pin_write(self->enb, 1); // 最后一个 enb 高电平发生在 SPB240 后
+				_PIN_WRITE_FAST(self->enb, 1); // 最后一个 enb 高电平发生在 SPB240 后
 				mp_hal_delay_us_fast(40);
-				mp_hal_pin_write(self->enb, 0);
+				_PIN_WRITE_FAST(self->enb, 0);
 			}
-			if (i == 484) mp_hal_pin_write(self->xrst, 0); // xrst low, exit update mode
+			if (i == 484) _PIN_WRITE_FAST(self->xrst, 0); // xrst low, exit update mode
 			mp_hal_delay_us_fast(1);
-			MP_PIN_TOGGLE(self->vck); // vck 3~488 中的无数据部分
+			_PIN_TOGGLE(self->vck); // vck 3~488 中的无数据部分
 		}
 	}
 	return mp_const_none;
 }
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(lpm012m134b_LPM012M134B_flush_buffer_rgb565_obj, 4, 4, lpm012m134b_LPM012M134B_flush_buffer_rgb565);
+
+#undef _PIN_TOGGLE
+#undef _PIN_WRITE_FAST
 
 static mp_obj_t lpm012m134b_LPM012M134B_blit_buffer(size_t n_args, const mp_obj_t *args_in) {
 	lpm012m134b_LPM012M134B_obj_t *self = MP_OBJ_TO_PTR(args_in[0]);
